@@ -106,10 +106,10 @@ public class SwerveOpMode extends LinearOpMode {
             position = 0;
         } else if (gamepad1.b|| gamepad1.x) {
             // move to 90 degrees.
-            position = 0.5;
+            position = 90;
         } else if (gamepad1.a) {
             // move to 180 degrees.
-            position = 1;
+            position = 180;
         }
         double correctedPosition = this.pidController.getCorrectValue(position, currentPosition);
         this.setServoPosition(correctedPosition);
