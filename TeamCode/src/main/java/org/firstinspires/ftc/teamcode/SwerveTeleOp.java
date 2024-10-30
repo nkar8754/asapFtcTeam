@@ -27,10 +27,21 @@ public class SwerveTeleOp extends LinearOpMode {
     private CRServo frontRightServo;
     private CRServo backRightServo;
 
-    public static double Prop = 0.1;
-    public static double Int = 0;
+    public static double Prop1 = 0;
+    public static double Int1 = 0;
+    public static double Deriv1 = 0;
 
-    public static double Deriv = 2;
+    public static double Prop2 = 0;
+    public static double Int2 = 0;
+    public static double Deriv2 = 0;
+
+    public static double Prop3 = 0;
+    public static double Int3 = 0;
+    public static double Deriv3 = 0;
+
+    public static double Prop4 = 0;
+    public static double Int4 = 0;
+    public static double Deriv4 = 0;
 
     public static double svP = 0;
 
@@ -41,7 +52,10 @@ public class SwerveTeleOp extends LinearOpMode {
 
     AnalogInput frontRightEncoder;
 
-    private PidController pidController = new PidController(Prop, Int, Deriv);
+    private PidController pidController1 = new PidController(Prop1, Int1, Deriv1);
+    private PidController pidController2 = new PidController(Prop2, Int2, Deriv2);
+    private PidController pidController3 = new PidController(Prop3, Int3, Deriv3);
+    private PidController pidController4 = new PidController(Prop4, Int4, Deriv4);
 
     //private SwerveKinematics SwerveMove = new SwerveKinematics(1,2,3,16,16);
 
@@ -62,9 +76,7 @@ public class SwerveTeleOp extends LinearOpMode {
         frontLeftEncoder = hardwareMap.get(AnalogInput.class, "frontLeftEncoder");
         frontRightEncoder = hardwareMap.get(AnalogInput.class, "frontRightEncoder");
 
-
         telemetry = new MultipleTelemetry(FtcDashboard.getInstance().getTelemetry(),telemetry);
-
 
         telemetry.addData("Status", "Initialized");
         telemetry.update();
@@ -80,9 +92,18 @@ public class SwerveTeleOp extends LinearOpMode {
         //double servoPower = 0;
 
         while (opModeIsActive()) {
-            pidController.Kp = Prop;
-            pidController.Ki = Int;
-            pidController.Kd = Deriv;
+            pidController1.Kp = Prop1;
+            pidController1.Ki = Int1;
+            pidController1.Kd = Deriv1;
+            pidController2.Kp = Prop2;
+            pidController2.Ki = Int2;
+            pidController2.Kd = Deriv2;
+            pidController3.Kp = Prop3;
+            pidController3.Ki = Int3;
+            pidController3.Kd = Deriv3;
+            pidController4.Kp = Prop4;
+            pidController4.Ki = Int4;
+            pidController4.Kd = Deriv4;
 
 //            if (Math.abs(this.gamepad1.left_stick_y) > 0.1) {
 //                tgtPower = -this.gamepad1.left_stick_y;
@@ -100,25 +121,25 @@ public class SwerveTeleOp extends LinearOpMode {
              backLeftMotor.setPower(tgtPower);
              frontRightMotor.setPower(tgtPower);
              backRightMotor.setPower(tgtPower);**/
-            double pid_output1 = -pidController.calculate(svP, (backLeftEncoder.getVoltage() / 3.3)*2-1);
+            double pid_output1 = -pidController1.calculate(svP, (backLeftEncoder.getVoltage() / 3.3)*2-1);
             backLeftServo.setPower(pid_output1);
-            double position1 = (backLeftEncoder.getVoltage() / 3.3) * 360;
 
-//            double pid_output2 = pidController.calculate(svP, (backRightEncoder.getVoltage() / 3.3)*2-1);
-//            backRightServo.setPower(pid_output2);
-//            double position2 = (backRightEncoder.getVoltage() / 3.3) * 360;
-//
-//            double pid_output3 = pidController.calculate(svP, (frontLeftEncoder.getVoltage() / 3.3)*2-1);
-//            frontLeftServo.setPower(pid_output3);
-//            double position3 = (frontLeftEncoder.getVoltage() / 3.3) * 360;
+            double pid_output2 = -pidController2.calculate(svP, (backRightEncoder.getVoltage() / 3.3)*2-1);
+            backRightServo.setPower(pid_output2);
 
-//            double pid_output4 = pidController.calculate(svP, (backRightEncoder.getVoltage() / 3.3)*2-1);
-//            frontRightServo.setPower(pid_output4);
-//            double position4 = (frontRightEncoder.getVoltage() / 3.3) * 360;
+            double pid_output3 = -pidController3.calculate(svP, (frontLeftEncoder.getVoltage() / 3.3)*2-1);
+            frontLeftServo.setPower(pid_output3);
+
+            double pid_output4 = -pidController4.calculate(svP, (frontRightEncoder.getVoltage() / 3.3)*2-1);
+            frontRightServo.setPower(pid_output4);
 
 
             telemetry.addData("Servo Power", pid_output1);
-            telemetry.addData("Encoder1", position1);
+            telemetry.addData("EncoderBR", backRightEncoder.getVoltage() / 3.3 * 360);
+            telemetry.addData("EncoderBL", backLeftEncoder.getVoltage() / 3.3 * 360);
+            telemetry.addData("EncoderFR", frontRightEncoder.getVoltage() / 3.3 * 360);
+            telemetry.addData("EncoderFL", frontLeftEncoder.getVoltage() / 3.3 * 360);
+
             telemetry.addData("Motor Power", tgtPower);
             telemetry.addData("Status", "Running");
             telemetry.update();
