@@ -13,6 +13,9 @@ import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
 //import com.arcrobotics.ftclib.kinematics.wpilibkinematics.SwerveModuleState;
 //import com.arcrobotics.ftclib.geometry.Translation2d;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.hardware.lynx.LynxModule;
+
+import java.util.List;
 
 @Config
 @TeleOp
@@ -91,6 +94,14 @@ public class SwerveTeleOp extends LinearOpMode {
         double tgtPower = 0;
         //double servoPower = 0;
 
+        List<LynxModule> allHubs = hardwareMap.getAll(LynxModule.class);
+
+
+
+        for (LynxModule hub : allHubs) {
+            hub.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL);
+        }
+
         while (opModeIsActive()) {
             pidController1.Kp = Prop1;
             pidController1.Ki = Int1;
@@ -104,6 +115,10 @@ public class SwerveTeleOp extends LinearOpMode {
             pidController4.Kp = Prop4;
             pidController4.Ki = Int4;
             pidController4.Kd = Deriv4;
+
+            for (LynxModule hub : allHubs) {
+                hub.clearBulkCache();
+            }
 
 //            if (Math.abs(this.gamepad1.left_stick_y) > 0.1) {
 //                tgtPower = -this.gamepad1.left_stick_y;
