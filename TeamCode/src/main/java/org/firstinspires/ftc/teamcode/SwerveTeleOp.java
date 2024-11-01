@@ -13,6 +13,9 @@ import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
 //import com.arcrobotics.ftclib.kinematics.wpilibkinematics.SwerveModuleState;
 //import com.arcrobotics.ftclib.geometry.Translation2d;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.hardware.lynx.LynxModule;
+
+import java.util.List;
 
 @Config
 @TeleOp
@@ -27,21 +30,9 @@ public class SwerveTeleOp extends LinearOpMode {
     private CRServo frontRightServo;
     private CRServo backRightServo;
 
-    public static double Prop1 = 0;
-    public static double Int1 = 0;
-    public static double Deriv1 = 0;
-
-    public static double Prop2 = 0;
-    public static double Int2 = 0;
-    public static double Deriv2 = 0;
-
-    public static double Prop3 = 0;
-    public static double Int3 = 0;
-    public static double Deriv3 = 0;
-
-    public static double Prop4 = 0;
-    public static double Int4 = 0;
-    public static double Deriv4 = 0;
+    public static double kp = 2;
+    public static double ki = 0.5;
+    public static double kd = 0.03;
 
     public static double svP = 0;
 
@@ -52,10 +43,10 @@ public class SwerveTeleOp extends LinearOpMode {
 
     AnalogInput frontRightEncoder;
 
-    private PidController pidController1 = new PidController(Prop1, Int1, Deriv1);
-    private PidController pidController2 = new PidController(Prop2, Int2, Deriv2);
-    private PidController pidController3 = new PidController(Prop3, Int3, Deriv3);
-    private PidController pidController4 = new PidController(Prop4, Int4, Deriv4);
+    private PidController pidController1 = new PidController(kp, ki, kd);
+    private PidController pidController2 = new PidController(kp, ki, kd);
+    private PidController pidController3 = new PidController(kp, ki, kd);
+    private PidController pidController4 = new PidController(kp, ki, kd);
 
     //private SwerveKinematics SwerveMove = new SwerveKinematics(1,2,3,16,16);
 
@@ -91,19 +82,30 @@ public class SwerveTeleOp extends LinearOpMode {
         double tgtPower = 0;
         //double servoPower = 0;
 
+        List<LynxModule> allHubs = hardwareMap.getAll(LynxModule.class);
+
+        for (LynxModule hub : allHubs) {
+            hub.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL);
+        }
+
+
         while (opModeIsActive()) {
-            pidController1.Kp = Prop1;
-            pidController1.Ki = Int1;
-            pidController1.Kd = Deriv1;
-            pidController2.Kp = Prop2;
-            pidController2.Ki = Int2;
-            pidController2.Kd = Deriv2;
-            pidController3.Kp = Prop3;
-            pidController3.Ki = Int3;
-            pidController3.Kd = Deriv3;
-            pidController4.Kp = Prop4;
-            pidController4.Ki = Int4;
-            pidController4.Kd = Deriv4;
+            for (LynxModule hub : allHubs) {
+                hub.clearBulkCache();
+            }
+
+            pidController1.Kp = kp;
+            pidController1.Ki = ki;
+            pidController1.Kd = kd;
+            pidController2.Kp = kp;
+            pidController2.Ki = ki;
+            pidController2.Kd = kd;
+            pidController3.Kp = kp;
+            pidController3.Ki = ki;
+            pidController3.Kd = kd;
+            pidController4.Kp = kp;
+            pidController4.Ki = ki;
+            pidController4.Kd = kd;
 
 //            if (Math.abs(this.gamepad1.left_stick_y) > 0.1) {
 //                tgtPower = -this.gamepad1.left_stick_y;
@@ -117,21 +119,23 @@ public class SwerveTeleOp extends LinearOpMode {
 //                servoPower = 0;
 //            }
 
+
+
             /**frontLeftMotor.setPower(tgtPower);
              backLeftMotor.setPower(tgtPower);
              frontRightMotor.setPower(tgtPower);
              backRightMotor.setPower(tgtPower);**/
             double pid_output1 = -pidController1.calculate(svP, (backLeftEncoder.getVoltage() / 3.3)*2-1);
-            backLeftServo.setPower(pid_output1);
+            backLeftServo.setPower(pid_output1 * 2);
 
             double pid_output2 = -pidController2.calculate(svP, (backRightEncoder.getVoltage() / 3.3)*2-1);
-            backRightServo.setPower(pid_output2);
+            backRightServo.setPower(pid_output2 * 2);
 
             double pid_output3 = -pidController3.calculate(svP, (frontLeftEncoder.getVoltage() / 3.3)*2-1);
-            frontLeftServo.setPower(pid_output3);
+            frontLeftServo.setPower(pid_output3 * 2);
 
             double pid_output4 = -pidController4.calculate(svP, (frontRightEncoder.getVoltage() / 3.3)*2-1);
-            frontRightServo.setPower(pid_output4);
+            frontRightServo.setPower(pid_output4 * 2);
 
 
             telemetry.addData("Servo Power", pid_output1);
