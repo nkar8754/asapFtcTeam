@@ -31,8 +31,13 @@ public class SwerveTeleOp extends LinearOpMode {
     private CRServo backRightServo;
 
     public static double kp = 2;
-    public static double ki = 0.5;
-    public static double kd = 0.03;
+    public static double ki = 0.6;
+    public static double kd = 0.04;
+
+    public static double offsetFR = 36;
+    public static double offsetBR = -45;
+    public static double offsetFL = 59;
+    public static double offsetBL = 25;
 
     public static double svP = 0;
 
@@ -80,7 +85,7 @@ public class SwerveTeleOp extends LinearOpMode {
 
         // run until the end of the match (driver presses STOP)
         double tgtPower = 0;
-        //double servoPower = 0;
+        double servoPower = 0;
 
         List<LynxModule> allHubs = hardwareMap.getAll(LynxModule.class);
 
@@ -107,34 +112,33 @@ public class SwerveTeleOp extends LinearOpMode {
             pidController4.Ki = ki;
             pidController4.Kd = kd;
 
-//            if (Math.abs(this.gamepad1.left_stick_y) > 0.1) {
-//                tgtPower = -this.gamepad1.left_stick_y;
-//            } else {
-//                tgtPower = 0;
-//            }
-//
-//            if (Math.abs(this.gamepad1.right_stick_y) > 0.1) {
-//                servoPower = -this.gamepad1.right_stick_y;
-//            } else {
-//                servoPower = 0;
-//            }
+            if (Math.abs(this.gamepad1.left_stick_y) > 0.1) {
+                tgtPower = -this.gamepad1.left_stick_y;
+            } else {
+                tgtPower = 0;
+            }
 
+            if (Math.abs(this.gamepad1.right_stick_y) > 0.1) {
+                servoPower = -this.gamepad1.right_stick_y;
+            } else {
+                servoPower = 0;
+            }
 
-
-            /**frontLeftMotor.setPower(tgtPower);
-             backLeftMotor.setPower(tgtPower);
-             frontRightMotor.setPower(tgtPower);
-             backRightMotor.setPower(tgtPower);**/
-            double pid_output1 = -pidController1.calculate(svP, (backLeftEncoder.getVoltage() / 3.3)*2-1);
+            frontLeftMotor.setPower(-tgtPower);
+            backLeftMotor.setPower(-tgtPower);
+            frontRightMotor.setPower(-tgtPower);
+            backRightMotor.setPower(-tgtPower);
+             
+            double pid_output1 = -pidController1.calculate(servoPower, ((backLeftEncoder.getVoltage() / 3.3) - offsetBL / 360.0)*2-1);
             backLeftServo.setPower(pid_output1 * 2);
 
-            double pid_output2 = -pidController2.calculate(svP, (backRightEncoder.getVoltage() / 3.3)*2-1);
+            double pid_output2 = -pidController2.calculate(servoPower, ((backRightEncoder.getVoltage() / 3.3) - offsetBR / 360.0)*2-1);
             backRightServo.setPower(pid_output2 * 2);
 
-            double pid_output3 = -pidController3.calculate(svP, (frontLeftEncoder.getVoltage() / 3.3)*2-1);
+            double pid_output3 = -pidController3.calculate(servoPower, ((frontLeftEncoder.getVoltage() / 3.3) - offsetFL / 360.0)*2-1);
             frontLeftServo.setPower(pid_output3 * 2);
 
-            double pid_output4 = -pidController4.calculate(svP, (frontRightEncoder.getVoltage() / 3.3)*2-1);
+            double pid_output4 = -pidController4.calculate(servoPower, ((frontRightEncoder.getVoltage() / 3.3) - offsetFR / 360.0)*2-1);
             frontRightServo.setPower(pid_output4 * 2);
 
 
