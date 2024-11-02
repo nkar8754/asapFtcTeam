@@ -87,12 +87,26 @@ public class SwerveTeleOp extends LinearOpMode {
         double tgtPower = 0;
         double servoPower = 0;
 
+        double totalRotationBL = 0;
+        double totalRotationBR = 0;
+        double totalRotationFL = 0;
+        double totalRotationFR = 0;
+
+        int revolutionCountBL = 0;
+        int revolutionCountBR = 0;
+        int revolutionCountFL = 0;
+        int revolutionCountFR = 0;
+
+        double previousEncoderBL = 0;
+        double previousEncoderBR = 0;
+        double previousEncoderFL = 0;
+        double perviousEncoderFR = 0;
+
         List<LynxModule> allHubs = hardwareMap.getAll(LynxModule.class);
 
         for (LynxModule hub : allHubs) {
             hub.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL);
         }
-
 
         while (opModeIsActive()) {
             for (LynxModule hub : allHubs) {
@@ -128,6 +142,24 @@ public class SwerveTeleOp extends LinearOpMode {
             backLeftMotor.setPower(-tgtPower);
             frontRightMotor.setPower(-tgtPower);
             backRightMotor.setPower(-tgtPower);
+
+            double encoderBL = ((backLeftEncoder.getVoltage() / 3.3) * 360 - offsetBL);
+            double encoderBR = ((backRightEncoder.getVoltage() / 3.3) * 360 - offsetBR);
+            double encoderFL = ((frontLeftEncoder.getVoltage() / 3.3) * 360 - offsetFL);
+            double encoderFR = ((frontRightEncoder.getVoltage() / 3.3) * 360 - offsetFR);
+
+            if (Math.abs(encoderBL) - Math.abs(previousEncoderBL) < -100) {
+                revolutionCountBL += 1;
+            } else if(Math.abs(encoderBL) - Math.abs(previousEncoderBL) > 100) {
+                revolutionCountBL -= 1;
+            } else if((Math.abs(encoderBL) - Math.abs(previousEncoderBL) < -20) || (Math.abs(encoderBL) - Math.abs(previousEncoderBL) > 20)) {
+                totalRotationBL = encoderBL + revolutionCountBL * 360;
+            }
+
+            previousEncoderBL = encoderBL;
+            previousEncoderBR = encoderBR;
+            previousEncoderFL = encoderFL;
+            previousEncoderFR = encoderFR;
              
             double pid_output1 = -pidController1.calculate(servoPower, ((backLeftEncoder.getVoltage() / 3.3) - offsetBL / 360.0)*2-1);
             backLeftServo.setPower(pid_output1 * 2);
@@ -143,10 +175,10 @@ public class SwerveTeleOp extends LinearOpMode {
 
 
             telemetry.addData("Servo Power", pid_output1);
-            telemetry.addData("EncoderBR", backRightEncoder.getVoltage() / 3.3 * 360);
-            telemetry.addData("EncoderBL", backLeftEncoder.getVoltage() / 3.3 * 360);
-            telemetry.addData("EncoderFR", frontRightEncoder.getVoltage() / 3.3 * 360);
-            telemetry.addData("EncoderFL", frontLeftEncoder.getVoltage() / 3.3 * 360);
+            telemetry.addData("EncoderBR", totalRotationBR);
+            telemetry.addData("EncoderBL", totalRotationBL);
+            telemetry.addData("EncoderFR", totalRotationFR);
+            telemetry.addData("EncoderFL", totalRotationFL);
 
             telemetry.addData("Motor Power", tgtPower);
             telemetry.addData("Status", "Running");
