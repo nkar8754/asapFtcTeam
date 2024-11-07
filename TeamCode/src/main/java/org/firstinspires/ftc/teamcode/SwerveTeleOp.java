@@ -34,10 +34,10 @@ public class SwerveTeleOp extends LinearOpMode {
     public static double ki = 0.6;
     public static double kd = 0.04;
 
-    public static double offsetFR = 36;
-    public static double offsetBR = -45;
-    public static double offsetFL = 59;
-    public static double offsetBL = 25;
+    public static double offsetFR = 100;
+    public static double offsetBR = 130;
+    public static double offsetFL = -100;
+    public static double offsetBL = -180;
 
     public static double svP = 0;
 
@@ -143,44 +143,74 @@ public class SwerveTeleOp extends LinearOpMode {
             frontRightMotor.setPower(-tgtPower);
             backRightMotor.setPower(-tgtPower);
 
-            double encoderBL = ((backLeftEncoder.getVoltage() / 3.3) * 360.0 - offsetBL);
-            double encoderBR = ((backRightEncoder.getVoltage() / 3.3) * 360.0 - offsetBR);
-            double encoderFL = ((frontLeftEncoder.getVoltage() / 3.3) * 360.0 - offsetFL);
-            double encoderFR = ((frontRightEncoder.getVoltage() / 3.3) * 360.0 - offsetFR);
+            double encoderBL = ((backLeftEncoder.getVoltage() / 3.3) * 360.0);
+            double encoderBR = ((backRightEncoder.getVoltage() / 3.3) * 360.0);
+            double encoderFL = ((frontLeftEncoder.getVoltage() / 3.3) * 360.0);
+            double encoderFR = ((frontRightEncoder.getVoltage() / 3.3) * 360.0);
 
             double deltaAngleBL = Math.abs(encoderBL) - Math.abs(previousEncoderBL);
-            if (deltaAngleBL < -100) {
+            if (deltaAngleBL < -180 && encoderBL < 180) {
                 revolutionCountBL += 1;
-            } else if (deltaAngleBL > 100) {
+            } else if (deltaAngleBL > 180 && encoderBL > 180) {
                 revolutionCountBL -= 1;
-            } else {
-                totalRotationBL = encoderBL + revolutionCountBL * 360;
             }
 
-            
+            totalRotationBL = encoderBL + revolutionCountBL * 360 - offsetBL;
+
+            double deltaAngleBR = Math.abs(encoderBR) - Math.abs(previousEncoderBR);
+            if (deltaAngleBR < -180 && encoderBR < 180) {
+                revolutionCountBR += 1;
+            } else if (deltaAngleBR > 180 && encoderBR > 180) {
+                revolutionCountBR -= 1;
+            }
+
+            totalRotationBR = encoderBR + revolutionCountBR * 360 - offsetBR;
+
+            double deltaAngleFL = Math.abs(encoderFL) - Math.abs(previousEncoderFL);
+            if (deltaAngleFL < -180 && encoderFL < 180) {
+                revolutionCountFL += 1;
+            } else if (deltaAngleFL > 180 && encoderFL > 180) {
+                revolutionCountFL -= 1;
+            }
+
+            totalRotationFL = encoderFL + revolutionCountFL * 360 - offsetFL;
+
+            double deltaAngleFR = Math.abs(encoderFR) - Math.abs(previousEncoderFR);
+            if (deltaAngleFR < -180 && encoderFR < 180) {
+                revolutionCountFR += 1;
+            } else if (deltaAngleFR > 180 && encoderFR > 180) {
+                revolutionCountFR -= 1;
+            }
+
+            totalRotationFR = encoderFR + revolutionCountFR * 360 - offsetFR;
 
             previousEncoderBL = encoderBL;
             previousEncoderBR = encoderBR;
             previousEncoderFL = encoderFL;
             previousEncoderFR = encoderFR;
 
-            double pid_output1 = -pidController1.calculate(servoPower, ((backLeftEncoder.getVoltage() / 3.3) - offsetBL / 360.0)*2-1);
-            backLeftServo.setPower(pid_output1 * 0);
+            double pid_output1 = -pidController1.calculate(servoPower, (totalRotationBL / 360.0) * 2.0 - 1.0);
+            backLeftServo.setPower(pid_output1 * 2);
 
-            double pid_output2 = -pidController2.calculate(servoPower, ((backRightEncoder.getVoltage() / 3.3) - offsetBR / 360.0)*2-1);
-            backRightServo.setPower(pid_output2 * 0);
+            double pid_output2 = -pidController2.calculate(servoPower, (totalRotationBR / 360.0) * 2.0 - 1.0);
+            backRightServo.setPower(pid_output2 * 2);
 
-            double pid_output3 = -pidController3.calculate(servoPower, ((frontLeftEncoder.getVoltage() / 3.3) - offsetFL / 360.0)*2-1);
-            frontLeftServo.setPower(pid_output3 * 0);
+            double pid_output3 = -pidController3.calculate(servoPower, (totalRotationFL / 360.0) * 2.0 - 1.0);
+            frontLeftServo.setPower(pid_output3 * 2);
 
-            double pid_output4 = -pidController4.calculate(servoPower, ((frontRightEncoder.getVoltage() / 3.3) - offsetFR / 360.0)*2-1);
-            frontRightServo.setPower(pid_output4 * 0);
+            double pid_output4 = -pidController4.calculate(servoPower, (totalRotationFR / 360.0) * 2.0 - 1.0);
+            frontRightServo.setPower(pid_output4 * 2);
 
             telemetry.addData("Servo Power", pid_output1);
             telemetry.addData("EncoderBR", totalRotationBR);
             telemetry.addData("EncoderBL", totalRotationBL);
             telemetry.addData("EncoderFR", totalRotationFR);
             telemetry.addData("EncoderFL", totalRotationFL);
+
+            telemetry.addData("revolutionsBR", revolutionCountBR * 100);
+            telemetry.addData("revolutionsBL", revolutionCountBL * 100);
+            telemetry.addData("revolutionsFR", revolutionCountFR * 100);
+            telemetry.addData("revolutionsFL", revolutionCountFL * 100);
 
             telemetry.addData("Motor Power", tgtPower);
             telemetry.addData("Status", "Running");
