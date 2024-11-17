@@ -5,9 +5,7 @@ import com.acmerobotics.dashboard.config.Config;
 //import com.arcrobotics.ftclib.kinematics.wpilibkinematics.ChassisSpeeds;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
-import com.qualcomm.robotcore.hardware.AnalogInput;
 import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.hardware.CRServo;
 import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
 //import com.arcrobotics.ftclib.kinematics.wpilibkinematics.SwerveDriveKinematics;
 //import com.arcrobotics.ftclib.kinematics.wpilibkinematics.SwerveModuleState;
@@ -23,11 +21,6 @@ public class SwerveTeleOp extends LinearOpMode {
     private DcMotor backLeftMotor;
     private DcMotor frontRightMotor;
     private DcMotor backRightMotor;
-
-    private CRServo frontLeftServo;
-    private CRServo backLeftServo;
-    private CRServo frontRightServo;
-    private CRServo backRightServo;
 
     public static double Prop1 = 0;
     public static double Int1 = 0;
@@ -47,22 +40,17 @@ public class SwerveTeleOp extends LinearOpMode {
 
     public static double svP = 0;
 
-    AnalogInput backLeftEncoder;
-    AnalogInput backRightEncoder;
-    AnalogInput frontLeftEncoder;
-    AnalogInput frontRightEncoder;
-
-    private PidController pidController1 = new PidController(Prop1, Int1, Deriv1);
-    private PidController pidController2 = new PidController(Prop2, Int2, Deriv2);
-    private PidController pidController3 = new PidController(Prop3, Int3, Deriv3);
-    private PidController pidController4 = new PidController(Prop4, Int4, Deriv4);
-
-    private enum ServoPositionEnum {
+    public enum ServoPositionEnum {
         BackLeft,
         BackRight,
         FrontLeft,
         FrontRight
     }
+
+    private ServoController backLeftServoController;
+    private ServoController backRightServoController;
+    private ServoController frontLeftServoController;
+    private ServoController frontRightServoController;
 
     //private SwerveKinematics SwerveMove = new SwerveKinematics(1,2,3,16,16);
 
@@ -70,10 +58,7 @@ public class SwerveTeleOp extends LinearOpMode {
     public void runOpMode() {
 
         initializeMotors();
-
-        initializeServos();
-
-        initializeEncoders();
+        initializeServoControllers();
 
         telemetry = new MultipleTelemetry(FtcDashboard.getInstance().getTelemetry(),telemetry);
 
@@ -91,18 +76,6 @@ public class SwerveTeleOp extends LinearOpMode {
         //double servoPower = 0;
 
         while (opModeIsActive()) {
-            pidController1.Kp = Prop1;
-            pidController1.Ki = Int1;
-            pidController1.Kd = Deriv1;
-            pidController2.Kp = Prop2;
-            pidController2.Ki = Int2;
-            pidController2.Kd = Deriv2;
-            pidController3.Kp = Prop3;
-            pidController3.Ki = Int3;
-            pidController3.Kd = Deriv3;
-            pidController4.Kp = Prop4;
-            pidController4.Ki = Int4;
-            pidController4.Kd = Deriv4;
 
 //            if (Math.abs(this.gamepad1.left_stick_y) > 0.1) {
 //                tgtPower = -this.gamepad1.left_stick_y;
@@ -121,10 +94,10 @@ public class SwerveTeleOp extends LinearOpMode {
              frontRightMotor.setPower(tgtPower);
              backRightMotor.setPower(tgtPower);**/
 
-            setServoPower(ServoPositionEnum.BackLeft, true);
-            setServoPower(ServoPositionEnum.BackRight, false);
-            setServoPower(ServoPositionEnum.FrontLeft, false);
-            setServoPower(ServoPositionEnum.FrontRight, false);
+            backLeftServoController.SetServoPower(svP, Prop1, Int1, Deriv1, true);
+            backRightServoController.SetServoPower(svP, Prop2, Int2, Deriv2, false);
+            frontLeftServoController.SetServoPower(svP, Prop3, Int3, Deriv3, false);
+            frontRightServoController.SetServoPower(svP, Prop4, Int4, Deriv4, false);
 
             telemetry.addData("Motor Power", tgtPower);
             telemetry.addData("Status", "Running");
@@ -139,96 +112,11 @@ public class SwerveTeleOp extends LinearOpMode {
         backRightMotor = hardwareMap.get(DcMotorEx.class, "backRightMotor");
     }
 
-    private void initializeServos(){
-        frontLeftServo = hardwareMap.get(CRServo.class, "frontLeftServo");
-        backLeftServo = hardwareMap.get(CRServo.class, "backLeftServo");
-        frontRightServo = hardwareMap.get(CRServo.class, "frontRightServo");
-        backRightServo = hardwareMap.get(CRServo.class, "backRightServo");
-    }
-
-    private void initializeEncoders(){
-        backLeftEncoder = hardwareMap.get(AnalogInput.class, "backLeftEncoder");
-        backRightEncoder = hardwareMap.get(AnalogInput.class, "backRightEncoder");
-        frontLeftEncoder = hardwareMap.get(AnalogInput.class, "frontLeftEncoder");
-        frontRightEncoder = hardwareMap.get(AnalogInput.class, "frontRightEncoder");
-    }
-
-    /*
-    Sets the servo power by position value.
-     */
-    private void setServoPower(ServoPositionEnum servoPosition, boolean displayServoPowerTelemetry)
-    {
-        PidController pidController = getPositionPidController(servoPosition);
-        AnalogInput encoder = getPositionEncoder(servoPosition);
-        CRServo servo = getPositionServo(servoPosition);
-
-        double voltageInDegrees = encoder.getVoltage() / 3.3;
-
-        double pid_output = -pidController.calculate(svP, voltageInDegrees*2-1);
-        servo.setPower(pid_output);
-
-        if (displayServoPowerTelemetry) {
-            telemetry.addData("Servo Power", pid_output);
-        }
-        String encoderDegCaption = String.format("Encoder%s", servoPosition.name());
-        telemetry.addData(encoderDegCaption, voltageInDegrees * 360);
-    }
-
-    /*
-    Returns the encoder based on the position value.
-     */
-    private AnalogInput getPositionEncoder(ServoPositionEnum servoPosition){
-        switch (servoPosition)
-        {
-            case BackLeft:
-                return backLeftEncoder;
-            case BackRight:
-                return backRightEncoder;
-            case FrontLeft:
-                return frontLeftEncoder;
-            case FrontRight:
-                return frontRightEncoder;
-            default:
-                throw new InvalidParameterException("Invalid servo motor position");
-        }
-    }
-
-    /*
-    Returns the servo based on the position value.
-     */
-    private CRServo getPositionServo(ServoPositionEnum servoPosition){
-        switch (servoPosition)
-        {
-            case BackLeft:
-                return backLeftServo;
-            case BackRight:
-                return backRightServo;
-            case FrontLeft:
-                return frontLeftServo;
-            case FrontRight:
-                return frontRightServo;
-            default:
-                throw new InvalidParameterException("Invalid servo motor position");
-        }
-    }
-
-    /*
-    Returns the pidController based on the position value.
-     */
-    private PidController getPositionPidController(ServoPositionEnum servoPosition){
-        switch (servoPosition)
-        {
-            case BackLeft:
-                return pidController1;
-            case BackRight:
-                return pidController2;
-            case FrontLeft:
-                return pidController3;
-            case FrontRight:
-                return pidController4;
-            default:
-                throw new InvalidParameterException("Invalid servo motor position");
-        }
+    private void initializeServoControllers() {
+        backLeftServoController = new ServoController(ServoPositionEnum.BackLeft, hardwareMap, telemetry);
+        backRightServoController = new ServoController(ServoPositionEnum.BackRight, hardwareMap, telemetry);
+        frontLeftServoController = new ServoController(ServoPositionEnum.FrontLeft, hardwareMap, telemetry);
+        frontRightServoController = new ServoController(ServoPositionEnum.FrontRight, hardwareMap, telemetry);
     }
 }
 
