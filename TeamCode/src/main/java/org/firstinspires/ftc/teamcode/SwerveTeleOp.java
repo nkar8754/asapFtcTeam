@@ -13,7 +13,9 @@ import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
 //import com.arcrobotics.ftclib.kinematics.wpilibkinematics.SwerveModuleState;
 //import com.arcrobotics.ftclib.geometry.Translation2d;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.hardware.lynx.LynxModule;
 
+import java.util.List;
 import java.security.InvalidParameterException;
 
 @Config
@@ -29,33 +31,42 @@ public class SwerveTeleOp extends LinearOpMode {
     private CRServo frontRightServo;
     private CRServo backRightServo;
 
-    public static double Prop1 = 0;
-    public static double Int1 = 0;
-    public static double Deriv1 = 0;
+    public static double kp = 2;
+    public static double ki = 0.6;
+    public static double kd = 0.04;
 
-    public static double Prop2 = 0;
-    public static double Int2 = 0;
-    public static double Deriv2 = 0;
+//    public static double Prop1 = 0;
+//    public static double Int1 = 0;
+//    public static double Deriv1 = 0;
+//
+//    public static double Prop2 = 0;
+//    public static double Int2 = 0;
+//    public static double Deriv2 = 0;
+//
+//    public static double Prop3 = 0;
+//    public static double Int3 = 0;
+//    public static double Deriv3 = 0;
+//
+//    public static double Prop4 = 0;
+//    public static double Int4 = 0;
+//    public static double Deriv4 = 0;
+//
+//    public static double svP = 0;
 
-    public static double Prop3 = 0;
-    public static double Int3 = 0;
-    public static double Deriv3 = 0;
-
-    public static double Prop4 = 0;
-    public static double Int4 = 0;
-    public static double Deriv4 = 0;
-
-    public static double svP = 0;
+    public static double offsetFR = 100;
+    public static double offsetBR = 130;
+    public static double offsetFL = -100;
+    public static double offsetBL = -180;
 
     AnalogInput backLeftEncoder;
     AnalogInput backRightEncoder;
     AnalogInput frontLeftEncoder;
     AnalogInput frontRightEncoder;
 
-    private PidController pidController1 = new PidController(Prop1, Int1, Deriv1);
-    private PidController pidController2 = new PidController(Prop2, Int2, Deriv2);
-    private PidController pidController3 = new PidController(Prop3, Int3, Deriv3);
-    private PidController pidController4 = new PidController(Prop4, Int4, Deriv4);
+    private PidController pidControllerBL = new PidController(kp, ki, kd);
+    private PidController pidControllerBR = new PidController(kp, ki, kd);
+    private PidController pidControllerFL = new PidController(kp, ki, kd);
+    private PidController pidControllerFR = new PidController(kp, ki, kd);
 
     private enum ServoPositionEnum {
         BackLeft,
@@ -63,6 +74,25 @@ public class SwerveTeleOp extends LinearOpMode {
         FrontLeft,
         FrontRight
     }
+
+    // run until the end of the match (driver presses STOP)
+    private double tgtPower = 0;
+    private double servoPower = 0;
+
+    private double totalRotationBL = 0;
+    private double totalRotationBR = 0;
+    private double totalRotationFL = 0;
+    private double totalRotationFR = 0;
+
+    private int revolutionCountBL = 0;
+    private int revolutionCountBR = 0;
+    private int revolutionCountFL = 0;
+    private int revolutionCountFR = 0;
+
+    private double previousEncoderBL = 0;
+    private double previousEncoderBR = 0;
+    private double previousEncoderFL = 0;
+    private double previousEncoderFR = 0;
 
     //private SwerveKinematics SwerveMove = new SwerveKinematics(1,2,3,16,16);
 
@@ -86,40 +116,45 @@ public class SwerveTeleOp extends LinearOpMode {
         telemetry.addData("Status", "Running");
         telemetry.update();
 
-        // run until the end of the match (driver presses STOP)
-        double tgtPower = 0;
-        //double servoPower = 0;
+        List<LynxModule> allHubs = hardwareMap.getAll(LynxModule.class);
+
+        for(LynxModule hub : allHubs) {
+            hub.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL);
+        }
 
         while (opModeIsActive()) {
-            pidController1.Kp = Prop1;
-            pidController1.Ki = Int1;
-            pidController1.Kd = Deriv1;
-            pidController2.Kp = Prop2;
-            pidController2.Ki = Int2;
-            pidController2.Kd = Deriv2;
-            pidController3.Kp = Prop3;
-            pidController3.Ki = Int3;
-            pidController3.Kd = Deriv3;
-            pidController4.Kp = Prop4;
-            pidController4.Ki = Int4;
-            pidController4.Kd = Deriv4;
+            for(LynxModule hub : allHubs) {
+                hub.clearBulkCache();
+            }
+            pidControllerBL.Kp = kp;
+            pidControllerBL.Ki = ki;
+            pidControllerBL.Kd = kd;
+            pidControllerBR.Kp = kp;
+            pidControllerBR.Ki = ki;
+            pidControllerBR.Kd = kd;
+            pidControllerFL.Kp = kp;
+            pidControllerFL.Ki = ki;
+            pidControllerFL.Kd = kd;
+            pidControllerFR.Kp = kp;
+            pidControllerFR.Ki = ki;
+            pidControllerFR.Kd = kd;
 
-//            if (Math.abs(this.gamepad1.left_stick_y) > 0.1) {
-//                tgtPower = -this.gamepad1.left_stick_y;
-//            } else {
-//                tgtPower = 0;
-//            }
-//
-//            if (Math.abs(this.gamepad1.right_stick_y) > 0.1) {
-//                servoPower = -this.gamepad1.right_stick_y;
-//            } else {
-//                servoPower = 0;
-//            }
+            if (Math.abs(this.gamepad1.left_stick_y) > 0.1) {
+                tgtPower = -this.gamepad1.left_stick_y;
+            } else {
+                tgtPower = 0;
+            }
 
-            /**frontLeftMotor.setPower(tgtPower);
-             backLeftMotor.setPower(tgtPower);
-             frontRightMotor.setPower(tgtPower);
-             backRightMotor.setPower(tgtPower);**/
+            if (Math.abs(this.gamepad1.right_stick_y) > 0.1) {
+                servoPower = -this.gamepad1.right_stick_y;
+            } else {
+                servoPower = 0;
+            }
+
+            frontLeftMotor.setPower(-tgtPower);
+            backLeftMotor.setPower(-tgtPower);
+            frontRightMotor.setPower(-tgtPower);
+            backRightMotor.setPower(-tgtPower);
 
             setServoPower(ServoPositionEnum.BackLeft, true);
             setServoPower(ServoPositionEnum.BackRight, false);
@@ -158,77 +193,177 @@ public class SwerveTeleOp extends LinearOpMode {
      */
     private void setServoPower(ServoPositionEnum servoPosition, boolean displayServoPowerTelemetry)
     {
-        PidController pidController = getPositionPidController(servoPosition);
-        AnalogInput encoder = getPositionEncoder(servoPosition);
-        CRServo servo = getPositionServo(servoPosition);
+        ServoParameters servoParams = getServoParameters(servoPosition);
 
-        double voltageInDegrees = encoder.getVoltage() / 3.3;
+        PidController pidController = servoParams.getPidController();
+        AnalogInput encoder = servoParams.getEncoder();
+        CRServo servo = servoParams.getServo();
+        double encoderInDeg = servoParams.getEncoderInDeg();
+        double prevEncoderInDeg = servoParams.getPreviousEncoderInDeg();
+        int revolutionCount = servoParams.getRevolutionCount();
+        double offset = servoParams.getOffset();
 
-        double pid_output = -pidController.calculate(svP, voltageInDegrees*2-1);
-        servo.setPower(pid_output);
+        double deltaAngle = Math.abs(encoderInDeg) - Math.abs(prevEncoderInDeg);
+        if (deltaAngle < -180 && encoderInDeg < 180) {
+            revolutionCount += 1;
+        } else if (deltaAngle > 180 && encoderInDeg > 180) {
+            revolutionCount -= 1;
+        }
+
+        double totalRotation = (encoderInDeg + revolutionCount * 360 - offset);
+
+        setPreviousEncoderInDeg(servoPosition, encoderInDeg);
+        setRevolutionCount(servoPosition, revolutionCount);
+
+        double pid_output = -pidController.calculate(servoPower, (totalRotation / 360.0) * 2.0 - 1.0);
+        servo.setPower(pid_output * 2);
 
         if (displayServoPowerTelemetry) {
             telemetry.addData("Servo Power", pid_output);
         }
-        String encoderDegCaption = String.format("Encoder%s", servoPosition.name());
-        telemetry.addData(encoderDegCaption, voltageInDegrees * 360);
-    }
+        String encoderRotationCaption = String.format("Encoder%s", servoPosition.name());
+        telemetry.addData(encoderRotationCaption, totalRotation);
 
-    /*
-    Returns the encoder based on the position value.
-     */
-    private AnalogInput getPositionEncoder(ServoPositionEnum servoPosition){
-        switch (servoPosition)
-        {
-            case BackLeft:
-                return backLeftEncoder;
-            case BackRight:
-                return backRightEncoder;
-            case FrontLeft:
-                return frontLeftEncoder;
-            case FrontRight:
-                return frontRightEncoder;
-            default:
-                throw new InvalidParameterException("Invalid servo motor position");
-        }
-    }
-
-    /*
-    Returns the servo based on the position value.
-     */
-    private CRServo getPositionServo(ServoPositionEnum servoPosition){
-        switch (servoPosition)
-        {
-            case BackLeft:
-                return backLeftServo;
-            case BackRight:
-                return backRightServo;
-            case FrontLeft:
-                return frontLeftServo;
-            case FrontRight:
-                return frontRightServo;
-            default:
-                throw new InvalidParameterException("Invalid servo motor position");
-        }
+        String revolutionsCaption = String.format("Revolutions%s", servoPosition.name());
+        telemetry.addData(revolutionsCaption, revolutionCount * 100);
     }
 
     /*
     Returns the pidController based on the position value.
      */
-    private PidController getPositionPidController(ServoPositionEnum servoPosition){
+    private ServoParameters getServoParameters(ServoPositionEnum servoPosition){
         switch (servoPosition)
         {
             case BackLeft:
-                return pidController1;
+                return new ServoParameters(
+                        pidControllerBL,
+                        backLeftServo,
+                        backLeftEncoder,
+                        previousEncoderBL,
+                        revolutionCountBL,
+                        offsetBL);
             case BackRight:
-                return pidController2;
+                return new ServoParameters(
+                        pidControllerBR,
+                        backRightServo,
+                        backRightEncoder,
+                        previousEncoderBR,
+                        revolutionCountBR,
+                        offsetBR);
             case FrontLeft:
-                return pidController3;
+                return new ServoParameters(
+                        pidControllerFL,
+                        frontLeftServo,
+                        frontLeftEncoder,
+                        previousEncoderFL,
+                        revolutionCountFL,
+                        offsetFL);
             case FrontRight:
-                return pidController4;
+                return new ServoParameters(
+                        pidControllerFR,
+                        frontRightServo,
+                        frontRightEncoder,
+                        previousEncoderFR,
+                        revolutionCountFR,
+                        offsetFR);
             default:
                 throw new InvalidParameterException("Invalid servo motor position");
         }
     }
+
+    /*
+    Sets revolution count based on the position value.
+     */
+    private void setRevolutionCount(ServoPositionEnum servoPosition, int newValue){
+        switch (servoPosition)
+        {
+            case BackLeft:
+                revolutionCountBL = newValue;
+            case BackRight:
+                revolutionCountBR = newValue;
+            case FrontLeft:
+                revolutionCountFL = newValue;
+            case FrontRight:
+                revolutionCountFR = newValue;
+            default:
+                throw new InvalidParameterException("Invalid servo motor position");
+        }
+    }
+
+    /*
+    Sets previous encoder value based on the position value.
+     */
+    private void setPreviousEncoderInDeg(ServoPositionEnum servoPosition, double newValue){
+        switch (servoPosition)
+        {
+            case BackLeft:
+                previousEncoderBL = newValue;
+            case BackRight:
+                previousEncoderBR = newValue;
+            case FrontLeft:
+                previousEncoderFL = newValue;
+            case FrontRight:
+                previousEncoderFR = newValue;
+            default:
+                throw new InvalidParameterException("Invalid servo motor position");
+        }
+    }
+
+//    /*
+//    Returns the encoder based on the position value.
+//     */
+//    private AnalogInput getPositionEncoder(ServoPositionEnum servoPosition){
+//        switch (servoPosition)
+//        {
+//            case BackLeft:
+//                return backLeftEncoder;
+//            case BackRight:
+//                return backRightEncoder;
+//            case FrontLeft:
+//                return frontLeftEncoder;
+//            case FrontRight:
+//                return frontRightEncoder;
+//            default:
+//                throw new InvalidParameterException("Invalid servo motor position");
+//        }
+//    }
+//
+//    /*
+//    Returns the servo based on the position value.
+//     */
+//    private CRServo getPositionServo(ServoPositionEnum servoPosition){
+//        switch (servoPosition)
+//        {
+//            case BackLeft:
+//                return backLeftServo;
+//            case BackRight:
+//                return backRightServo;
+//            case FrontLeft:
+//                return frontLeftServo;
+//            case FrontRight:
+//                return frontRightServo;
+//            default:
+//                throw new InvalidParameterException("Invalid servo motor position");
+//        }
+//    }
+//
+//    /*
+//    Returns the pidController based on the position value.
+//     */
+//    private PidController getPositionPidController(ServoPositionEnum servoPosition){
+//        switch (servoPosition)
+//        {
+//            case BackLeft:
+//                return pidController1;
+//            case BackRight:
+//                return pidController2;
+//            case FrontLeft:
+//                return pidController3;
+//            case FrontRight:
+//                return pidController4;
+//            default:
+//                throw new InvalidParameterException("Invalid servo motor position");
+//        }
+//    }
 }
 
