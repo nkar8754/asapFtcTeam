@@ -24,10 +24,27 @@ public class PidController{
           this.timer = new ElapsedTime();
           this.lastError = 0;
      }
+     
+     double clamp(double x, double min, double max) { 
+          return Math.min(Math.max(x, min), max);
+     }
+
+     double angleWrap(double difference) {
+          while (difference > 0.5) {
+               difference -= 1;
+          }
+
+          while (difference < -0.5) {
+               difference += 1;
+          }
+
+          return difference;
+     }
 
      double calculate(double targetState, double currentState)
      {
           double error = targetState - currentState;
+          error = angleWrap(error);
           integral += error * timer.seconds();
           double derivative = (error - lastError) / timer.seconds();
           lastError = error;
