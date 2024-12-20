@@ -14,10 +14,9 @@ public class matrix2d {
         this.shape = shape;
     }
 
-    public matrix2d matrixMultiply(matrix2d m1, matrix2d m2) {
+    public static matrix2d matrixMultiply(matrix2d m1, matrix2d m2) {
         int r1 = m1.shape.get(1);
         int c1 = m1.shape.get(0);
-        int r2 = m2.shape.get(1);
         int c2 = m2.shape.get(0);
         matrix2d result = new matrix2d(new ArrayList<Integer>(Arrays.asList(c2, r1)));
 
