@@ -15,6 +15,7 @@ import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.hardware.lynx.LynxModule;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Config
@@ -53,7 +54,7 @@ public class SwerveTeleOp extends LinearOpMode {
     private PidController pidController3 = new PidController(kp, ki, kd);
     private PidController pidController4 = new PidController(kp, ki, kd);
 
-    private SwerveKinematics swerveController = new SwerveKinematics(0, 0, 0, 13.75, 13.75);
+    private SwerveKinematics swerveController = new SwerveKinematics(234, 304.812);
 
     //private SwerveKinematics SwerveMove = new SwerveKinematics(1,2,3,16,16);
 
@@ -109,24 +110,23 @@ public class SwerveTeleOp extends LinearOpMode {
             pidController4.Ki = ki;
             pidController4.Kd = kd;
 
-            swerveController.setInputs(-gamepad1.left_stick_x, -gamepad1.left_stick_y, gamepad1.right_stick_x);
-            swerveController.calculateKinematics();
+            ArrayList<Double> output = swerveController.getVelocities(-gamepad1.left_stick_x, -gamepad1.left_stick_y, gamepad1.right_stick_x);
 
-            frontLeftMotor.setPower(swerveController.Wheel1Speed);
-            backLeftMotor.setPower(swerveController.Wheel3Speed);
-            frontRightMotor.setPower(swerveController.Wheel2Speed);
-            backRightMotor.setPower(swerveController.Wheel4Speed);
+            frontLeftMotor.setPower(output.get(3));
+            backLeftMotor.setPower(output.get(5));
+            frontRightMotor.setPower(output.get(1));
+            backRightMotor.setPower(output.get(7));
 
-            double pid_output1 = -pidController1.calculate(((swerveController.Wheel3Angle + 200) / 400 + offsetBL / 360) % 1, (backLeftEncoder.getVoltage() / 3.3));
+            double pid_output1 = -pidController1.calculate((output.get(4) / (2 * Math.PI) + offsetBL / 360) % 1, (backLeftEncoder.getVoltage() / 3.3));
             backLeftServo.setPower(pid_output1 * 2);
 
-            double pid_output2 = -pidController2.calculate(((swerveController.Wheel4Angle + 200) / 400 + offsetBR / 360) % 1, (backRightEncoder.getVoltage() / 3.3));
+            double pid_output2 = -pidController2.calculate((output.get(6) / (2 * Math.PI) + offsetBR / 360) % 1, (backRightEncoder.getVoltage() / 3.3));
             backRightServo.setPower(pid_output2 * 2);
 
-            double pid_output3 = -pidController3.calculate(((swerveController.Wheel1Angle + 200) / 400 + offsetFL / 360) % 1, (frontLeftEncoder.getVoltage() / 3.3));
+            double pid_output3 = -pidController3.calculate((output.get(2) / (2 * Math.PI) + offsetFL / 360) % 1, (frontLeftEncoder.getVoltage() / 3.3));
             frontLeftServo.setPower(pid_output3 * 2);
 
-            double pid_output4 = -pidController4.calculate(((swerveController.Wheel2Angle + 200) / 400 + offsetFR / 360) % 1, (frontRightEncoder.getVoltage() / 3.3));
+            double pid_output4 = -pidController4.calculate((output.get(0) / (2 * Math.PI) + offsetFR / 360) % 1, (frontRightEncoder.getVoltage() / 3.3));
             frontRightServo.setPower(pid_output4 * 2);
 
             telemetry.addData("Servo Power", pid_output1);
@@ -135,10 +135,10 @@ public class SwerveTeleOp extends LinearOpMode {
             telemetry.addData("EncoderFR", frontRightEncoder.getVoltage() / 3.3);
             telemetry.addData("EncoderFL", frontLeftEncoder.getVoltage() / 3.3);
 
-            telemetry.addData("w1", swerveController.Wheel1Speed);
-            telemetry.addData("w2", swerveController.Wheel2Speed);
-            telemetry.addData("w3", swerveController.Wheel3Speed);
-            telemetry.addData("w4", swerveController.Wheel4Speed);
+            telemetry.addData("w1", output.get(3));
+            telemetry.addData("w2", output.get(5));
+            telemetry.addData("w3", output.get(1));
+            telemetry.addData("w4", output.get(7));
 
             telemetry.addData("Status", "Running");
             telemetry.update();

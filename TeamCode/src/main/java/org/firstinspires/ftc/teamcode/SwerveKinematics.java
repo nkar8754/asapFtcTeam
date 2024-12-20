@@ -1,54 +1,49 @@
-
 package org.firstinspires.ftc.teamcode;
 
+import java.lang.reflect.Array;
+import java.util.ArrayList;
+import java.util.Arrays;
 
 public class SwerveKinematics {
-    private double Velocityx;
-    private double VelocityY;
-    private double Angle;
-    private double A;
-    private double B;
-    private double C;
-    private double D;
-    private double L;
-    private double W;
-    public static double Wheel1Speed;
-    public static double Wheel2Speed;
-    public static double Wheel3Speed;
-    public static double Wheel4Speed;
-    public static double Wheel1Angle;
-    public static double Wheel2Angle;
-    public static double Wheel3Angle;
-    public static double Wheel4Angle;
+    public matrix2d kinematicsMatrix = new matrix2d(new ArrayList<Integer>(Arrays.asList(3, 8)));
 
-    public SwerveKinematics(double Vx, double Vy, double ang, double Width, double Length) {
-        this.Velocityx = Vx;
-        this.VelocityY = Vy;
-        this.Angle = ang;
-        this.W = Width;
-        this.L = Length;
+    public SwerveKinematics(double wt, double wb) {
+        double rx = wb / 2;
+        double ry = wt / 2;
+
+        kinematicsMatrix.components = new ArrayList<Double>(Arrays.asList(
+                1.0, 0.0, rx,
+                0.0, 1.0, ry,
+                1.0, 0.0, -rx,
+                0.0, 1.0, ry,
+                1.0, 0.0, -rx,
+                0.0, 1.0, -ry,
+                1.0, 0.0, rx,
+                0.0, 1.0, -ry
+        ));
     }
 
-    public void setInputs(double Vx, double Vy, double ang) {
-        this.Velocityx = Vx;
-        this.VelocityY = Vy;
-        this.Angle = ang;
-    }
+    public ArrayList<Double> getVelocities(double vx, double vy, double wx) {
+        matrix2d velocity = new matrix2d(new ArrayList<Integer>(Arrays.asList(1, 3)));
+        velocity.components = new ArrayList<Double>(Arrays.asList(vx, vy, wx));
+        matrix2d velocities = matrix2d.matrixMultiply(this.kinematicsMatrix, velocity);
 
-    public void calculateKinematics() {
-        A = Velocityx-Angle*L/2;
-        B = Velocityx-Angle*W/2;
-        C = VelocityY-Angle*L/2;
-        D = VelocityY-Angle*W/2;
+        return new ArrayList<Double>(Arrays.asList(
+                //fr
+                Math.atan(velocities.components.get(1) / velocities.components.get(0)),
+                Math.sqrt(Math.pow(velocities.components.get(1), 2.0) + Math.pow(velocities.components.get(0), 2.0)),
 
-        Wheel1Speed = Math.sqrt((B*B)+(C*C));
-        Wheel2Speed = Math.sqrt((B*B)+(D*D));
-        Wheel3Speed = Math.sqrt((A*A)+(D*D));
-        Wheel4Speed = Math.sqrt((A*A)+(C*C));
+                //fl
+                Math.atan(velocities.components.get(3) / velocities.components.get(2)),
+                Math.sqrt(Math.pow(velocities.components.get(3), 2.0) + Math.pow(velocities.components.get(2), 2.0)),
 
-        Wheel1Angle = Math.atan2(B,D)*180/3.1415;
-        Wheel2Angle = Math.atan2(B,C)*180/3.1415;
-        Wheel3Angle = Math.atan2(A,D)*180/3.1415;
-        Wheel4Angle = Math.atan2(A,C)*180/3.1415;
+                //rl
+                Math.atan(velocities.components.get(5) / velocities.components.get(4)),
+                Math.sqrt(Math.pow(velocities.components.get(5), 2.0) + Math.pow(velocities.components.get(4), 2.0)),
+
+                //rr
+                Math.atan(velocities.components.get(7) / velocities.components.get(6)),
+                Math.sqrt(Math.pow(velocities.components.get(7), 2.0) + Math.pow(velocities.components.get(6), 2.0))
+        ));
     }
 }
