@@ -28,21 +28,26 @@ public class SwerveKinematics {
         velocity.components = new ArrayList<Double>(Arrays.asList(vx, vy, wx));
         matrix2d velocities = matrix2d.matrixMultiply(this.kinematicsMatrix, velocity);
 
+        double fr = Math.atan(velocities.components.get(0) / velocities.components.get(1));
+        double fl = Math.atan(velocities.components.get(2) / velocities.components.get(3));
+        double rl = Math.atan(velocities.components.get(4) / velocities.components.get(5));
+        double rr = Math.atan(velocities.components.get(6) / velocities.components.get(7));
+
         return new ArrayList<Double>(Arrays.asList(
                 //fr
-                Math.atan(velocities.components.get(1) / velocities.components.get(0)),
+                fr != fr ? 0 : fr,
                 Math.sqrt(Math.pow(velocities.components.get(1), 2.0) + Math.pow(velocities.components.get(0), 2.0)),
 
                 //fl
-                Math.atan(velocities.components.get(3) / velocities.components.get(2)),
+                fl != fl ? 0 : fl,
                 Math.sqrt(Math.pow(velocities.components.get(3), 2.0) + Math.pow(velocities.components.get(2), 2.0)),
 
                 //rl
-                Math.atan(velocities.components.get(5) / velocities.components.get(4)),
+                rl != rl ? 0 : rl,
                 Math.sqrt(Math.pow(velocities.components.get(5), 2.0) + Math.pow(velocities.components.get(4), 2.0)),
 
                 //rr
-                Math.atan(velocities.components.get(7) / velocities.components.get(6)),
+                rr != rr ? 0 : rr,
                 Math.sqrt(Math.pow(velocities.components.get(7), 2.0) + Math.pow(velocities.components.get(6), 2.0))
         ));
     }
