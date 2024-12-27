@@ -17,6 +17,7 @@ import com.qualcomm.hardware.lynx.LynxModule;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Scanner;
 
 @Config
 @TeleOp
@@ -32,13 +33,13 @@ public class SwerveTeleOp extends LinearOpMode {
     private CRServo backRightServo;
 
     public static double kp = 2;
-    public static double ki = 0.6;
+    public static double ki = 1;
     public static double kd = 0.0;
 
     public static double offsetFR = 110;
-    public static double offsetBR = 60;
+    public static double offsetBR = 130;
     public static double offsetFL = 90;
-    public static double offsetBL = -50;
+    public static double offsetBL = -60;
 
     public static double svP = 0;
 
@@ -117,16 +118,16 @@ public class SwerveTeleOp extends LinearOpMode {
             frontRightMotor.setPower(output.get(1));
             backRightMotor.setPower(output.get(7));
 
-            double pid_output1 = -pidController1.calculate((((output.get(4) / (Math.PI / 2)) + 1) / 2 + offsetBL / 360) % 1, (backLeftEncoder.getVoltage() / 3.3));
+            double pid_output1 = -pidController1.calculate((((output.get(4) / Math.PI) + 1) / 2 + offsetBL / 360) % 1, (backLeftEncoder.getVoltage() / 3.3));
             backLeftServo.setPower(pid_output1 * 2);
 
-            double pid_output2 = -pidController2.calculate((((output.get(6) / (Math.PI / 2)) + 1) / 2 + offsetBR / 360) % 1, (backRightEncoder.getVoltage() / 3.3));
+            double pid_output2 = -pidController2.calculate((((output.get(6) / Math.PI) + 1) / 2 + offsetBR / 360) % 1, (backRightEncoder.getVoltage() / 3.3));
             backRightServo.setPower(pid_output2 * 2);
 
-            double pid_output3 = -pidController3.calculate((((output.get(2) / (Math.PI / 2)) + 1) / 2 + offsetFL / 360) % 1, (frontLeftEncoder.getVoltage() / 3.3));
+            double pid_output3 = -pidController3.calculate((((output.get(2) / Math.PI) + 1) / 2 + offsetFL / 360) % 1, (frontLeftEncoder.getVoltage() / 3.3));
             frontLeftServo.setPower(pid_output3 * 2);
 
-            double pid_output4 = -pidController4.calculate((((output.get(0) / (Math.PI / 2)) + 1) / 2 + offsetFR / 360) % 1, (frontRightEncoder.getVoltage() / 3.3));
+            double pid_output4 = -pidController4.calculate((((output.get(0) / Math.PI) + 1) / 2 + offsetFR / 360) % 1, (frontRightEncoder.getVoltage() / 3.3));
             frontRightServo.setPower(pid_output4 * 2);
 
             telemetry.addData("Servo Power", pid_output1);
@@ -135,14 +136,13 @@ public class SwerveTeleOp extends LinearOpMode {
             telemetry.addData("EncoderFR", frontRightEncoder.getVoltage() / 3.3);
             telemetry.addData("EncoderFL", frontLeftEncoder.getVoltage() / 3.3);
 
-            telemetry.addData("w1", ((output.get(4) / (Math.PI / 2) + 1) / 2));
-            telemetry.addData("w2", ((output.get(6) / (Math.PI / 2) + 1) / 2));
-            telemetry.addData("w3", ((output.get(2) / (Math.PI / 2) + 1) / 2));
-            telemetry.addData("w4", ((output.get(0) / (Math.PI / 2) + 1) / 2));
+            telemetry.addData("w1", ((output.get(4) / Math.PI + 1) / 2));
+            telemetry.addData("w2", ((output.get(6) / Math.PI + 1) / 2));
+            telemetry.addData("w3", ((output.get(2) / Math.PI + 1) / 2));
+            telemetry.addData("w4", ((output.get(0) / Math.PI + 1) / 2));
 
             telemetry.addData("Status", "Running");
             telemetry.update();
         }
     }
-
 }

@@ -28,10 +28,10 @@ public class SwerveKinematics {
         velocity.components = new ArrayList<Double>(Arrays.asList(vx, vy, wx));
         matrix2d velocities = matrix2d.matrixMultiply(this.kinematicsMatrix, velocity);
 
-        double fr = Math.atan(velocities.components.get(0) / velocities.components.get(1));
-        double fl = Math.atan(velocities.components.get(2) / velocities.components.get(3));
-        double rl = Math.atan(velocities.components.get(4) / velocities.components.get(5));
-        double rr = Math.atan(velocities.components.get(6) / velocities.components.get(7));
+        double fr = Math.atan2(velocities.components.get(1), velocities.components.get(0));
+        double fl = Math.atan2(velocities.components.get(3), velocities.components.get(2));
+        double rl = Math.atan2(velocities.components.get(5), velocities.components.get(4));
+        double rr = Math.atan2(velocities.components.get(7), velocities.components.get(6));
 
         return new ArrayList<Double>(Arrays.asList(
                 //fr
