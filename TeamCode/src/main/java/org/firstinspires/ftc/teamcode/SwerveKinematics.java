@@ -34,19 +34,19 @@ public class SwerveKinematics {
         double rr = Math.atan2(velocities.components.get(7), velocities.components.get(6));
 
         return new ArrayList<Double>(Arrays.asList(
-                //fr
+                //rr
                 fr != fr ? 0 : fr,
                 Math.sqrt(Math.pow(velocities.components.get(1), 2.0) + Math.pow(velocities.components.get(0), 2.0)),
 
-                //fl
+                //rl
                 fl != fl ? 0 : fl,
                 Math.sqrt(Math.pow(velocities.components.get(3), 2.0) + Math.pow(velocities.components.get(2), 2.0)),
 
-                //rl
+                //fl
                 rl != rl ? 0 : rl,
                 Math.sqrt(Math.pow(velocities.components.get(5), 2.0) + Math.pow(velocities.components.get(4), 2.0)),
 
-                //rr
+                //fr
                 rr != rr ? 0 : rr,
                 Math.sqrt(Math.pow(velocities.components.get(7), 2.0) + Math.pow(velocities.components.get(6), 2.0))
         ));

@@ -111,23 +111,23 @@ public class SwerveTeleOp extends LinearOpMode {
             pidController4.Ki = ki;
             pidController4.Kd = kd;
 
-            ArrayList<Double> output = swerveController.getVelocities(-gamepad1.left_stick_x, -gamepad1.left_stick_y, gamepad1.right_stick_x);
+            ArrayList<Double> output = swerveController.getVelocities(-gamepad1.left_stick_x, -gamepad1.left_stick_y, gamepad1.right_stick_x / 180);
 
-            frontLeftMotor.setPower(output.get(3));
-            backLeftMotor.setPower(output.get(5));
-            frontRightMotor.setPower(output.get(1));
-            backRightMotor.setPower(output.get(7));
+            frontLeftMotor.setPower(output.get(5));
+            backLeftMotor.setPower(output.get(3));
+            frontRightMotor.setPower(output.get(7));
+            backRightMotor.setPower(output.get(1));
 
-            double pid_output1 = -pidController1.calculate((((output.get(4) / Math.PI) + 1) / 2 + offsetBL / 360) % 1, (backLeftEncoder.getVoltage() / 3.3));
+            double pid_output1 = -pidController1.calculate((((output.get(2) / Math.PI) + 1) / 2 + offsetBL / 360) % 1, (backLeftEncoder.getVoltage() / 3.3));
             backLeftServo.setPower(pid_output1 * 2);
 
-            double pid_output2 = -pidController2.calculate((((output.get(6) / Math.PI) + 1) / 2 + offsetBR / 360) % 1, (backRightEncoder.getVoltage() / 3.3));
+            double pid_output2 = -pidController2.calculate((((output.get(0) / Math.PI) + 1) / 2 + offsetBR / 360) % 1, (backRightEncoder.getVoltage() / 3.3));
             backRightServo.setPower(pid_output2 * 2);
 
-            double pid_output3 = -pidController3.calculate((((output.get(2) / Math.PI) + 1) / 2 + offsetFL / 360) % 1, (frontLeftEncoder.getVoltage() / 3.3));
+            double pid_output3 = -pidController3.calculate((((output.get(4) / Math.PI) + 1) / 2 + offsetFL / 360) % 1, (frontLeftEncoder.getVoltage() / 3.3));
             frontLeftServo.setPower(pid_output3 * 2);
 
-            double pid_output4 = -pidController4.calculate((((output.get(0) / Math.PI) + 1) / 2 + offsetFR / 360) % 1, (frontRightEncoder.getVoltage() / 3.3));
+            double pid_output4 = -pidController4.calculate((((output.get(6) / Math.PI) + 1) / 2 + offsetFR / 360) % 1, (frontRightEncoder.getVoltage() / 3.3));
             frontRightServo.setPower(pid_output4 * 2);
 
             telemetry.addData("Servo Power", pid_output1);
