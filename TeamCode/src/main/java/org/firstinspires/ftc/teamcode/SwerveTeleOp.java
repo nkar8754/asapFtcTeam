@@ -111,7 +111,7 @@ public class SwerveTeleOp extends LinearOpMode {
             pidController4.Ki = ki;
             pidController4.Kd = kd;
 
-            ArrayList<Double> output = swerveController.getVelocities(-gamepad1.left_stick_x, -gamepad1.left_stick_y, gamepad1.right_stick_x / 180);
+            ArrayList<Double> output = swerveController.getVelocities(-gamepad1.left_stick_x, -gamepad1.left_stick_y, gamepad1.right_stick_x / );
 
             frontLeftMotor.setPower(output.get(5));
             backLeftMotor.setPower(output.get(3));
