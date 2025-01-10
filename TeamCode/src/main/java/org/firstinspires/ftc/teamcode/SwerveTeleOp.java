@@ -14,6 +14,9 @@ import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
 //import com.arcrobotics.ftclib.geometry.Translation2d;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.hardware.lynx.LynxModule;
+import com.qualcomm.robotcore.hardware.Servo;
+
+import org.firstinspires.ftc.robotcore.internal.usb.EthernetOverUsbSerialNumber;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -32,6 +35,10 @@ public class SwerveTeleOp extends LinearOpMode {
     private CRServo frontRightServo;
     private CRServo backRightServo;
 
+    private Servo clawRotator;
+    private Servo armRotator;
+    private Servo clawActuator;
+
     public static double kp = 2;
     public static double ki = 1;
     public static double kd = 0.0;
@@ -45,9 +52,7 @@ public class SwerveTeleOp extends LinearOpMode {
 
     AnalogInput backLeftEncoder;
     AnalogInput backRightEncoder;
-
     AnalogInput frontLeftEncoder;
-
     AnalogInput frontRightEncoder;
 
     private PidController pidController1 = new PidController(kp, ki, kd);
@@ -57,7 +62,9 @@ public class SwerveTeleOp extends LinearOpMode {
 
     private SwerveKinematics swerveController = new SwerveKinematics(234, 304.812);
 
-    //private SwerveKinematics SwerveMove = new SwerveKinematics(1,2,3,16,16);
+    double clawAngle = 0.0;
+    double armAngle = 0.0;
+    double clawActuation = 0.0;
 
     @Override
     public void runOpMode() {
@@ -75,6 +82,10 @@ public class SwerveTeleOp extends LinearOpMode {
         backRightEncoder = hardwareMap.get(AnalogInput.class, "backRightEncoder");
         frontLeftEncoder = hardwareMap.get(AnalogInput.class, "frontLeftEncoder");
         frontRightEncoder = hardwareMap.get(AnalogInput.class, "frontRightEncoder");
+
+        clawRotator = hardwareMap.get(Servo.class, "clawRotator");
+        armRotator = hardwareMap.get(Servo.class, "armRotator");
+        clawActuator = hardwareMap.get(Servo.class, "clawActuator");
 
         telemetry = new MultipleTelemetry(FtcDashboard.getInstance().getTelemetry(),telemetry);
 
@@ -111,12 +122,7 @@ public class SwerveTeleOp extends LinearOpMode {
             pidController4.Ki = ki;
             pidController4.Kd = kd;
 
-            ArrayList<Double> output = swerveController.getVelocities(-gamepad1.left_stick_x, -gamepad1.left_stick_y, gamepad1.right_stick_x / 180);
-
-            frontLeftMotor.setPower(output.get(5));
-            backLeftMotor.setPower(output.get(3));
-            frontRightMotor.setPower(output.get(7));
-            backRightMotor.setPower(output.get(1));
+            ArrayList<Double> output = swerveController.getVelocities(-gamepad1.left_stick_y / 1.5, gamepad1.left_stick_x / 1.5, -gamepad1.right_stick_x / 360);
 
             double pid_output1 = -pidController1.calculate((((output.get(2) / Math.PI) + 1) / 2 + offsetBL / 360) % 1, (backLeftEncoder.getVoltage() / 3.3));
             backLeftServo.setPower(pid_output1 * 2);
@@ -129,6 +135,40 @@ public class SwerveTeleOp extends LinearOpMode {
 
             double pid_output4 = -pidController4.calculate((((output.get(6) / Math.PI) + 1) / 2 + offsetFR / 360) % 1, (frontRightEncoder.getVoltage() / 3.3));
             frontRightServo.setPower(pid_output4 * 2);
+
+            if (Math.abs(pid_output1) < 0.3 && Math.abs(pid_output2) < 0.3 && Math.abs(pid_output3) < 0.3 && Math.abs(pid_output4) < 0.3) {
+                frontLeftMotor.setPower(output.get(5));
+                backLeftMotor.setPower(output.get(3));
+                frontRightMotor.setPower(output.get(7));
+                backRightMotor.setPower(output.get(1));
+            } else {
+                frontLeftMotor.setPower(0);
+                backLeftMotor.setPower(0);
+                frontRightMotor.setPower(0);
+                backRightMotor.setPower(0);
+            }
+
+            if (gamepad1.y) {
+                armAngle += 0.01;
+            } else if(gamepad1.a) {
+                armAngle -= 0.01;
+            }
+
+            if (gamepad1.x) {
+                clawAngle += 0.01;
+            } else if(gamepad1.b) {
+                clawAngle -= 0.01;
+            }
+
+            if (gamepad1.right_bumper) {
+                clawActuation += 0.01;
+            } else if(gamepad1.left_bumper) {
+                clawActuation -= 0.01;
+            }
+
+            armRotator.setPosition(armAngle);
+            clawRotator.setPosition(clawAngle);
+            clawActuator.setPosition(clawActuation);
 
             telemetry.addData("Servo Power", pid_output1);
             telemetry.addData("EncoderBR", backRightEncoder.getVoltage() / 3.3);
