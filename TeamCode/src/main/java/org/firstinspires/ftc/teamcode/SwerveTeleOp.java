@@ -29,6 +29,7 @@ public class SwerveTeleOp extends LinearOpMode {
     private DcMotor backLeftMotor;
     private DcMotor frontRightMotor;
     private DcMotor backRightMotor;
+    private DcMotor slideMotor;
 
     private CRServo frontLeftServo;
     private CRServo backLeftServo;
@@ -65,6 +66,7 @@ public class SwerveTeleOp extends LinearOpMode {
     double clawAngle = 0.0;
     double armAngle = 0.0;
     double clawActuation = 0.0;
+    int slideMotorPosition = 0;
 
     @Override
     public void runOpMode() {
@@ -72,6 +74,10 @@ public class SwerveTeleOp extends LinearOpMode {
         backLeftMotor = hardwareMap.get(DcMotorEx.class, "backLeftMotor");
         frontRightMotor = hardwareMap.get(DcMotorEx.class, "frontRightMotor");
         backRightMotor = hardwareMap.get(DcMotorEx.class, "backRightMotor");
+        slideMotor = hardwareMap.get(DcMotorEx.class, "slideMotor");
+        slideMotor.setTargetPosition(slideMotorPosition);
+        slideMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        slideMotor.setPower(0.6);
 
         frontLeftServo = hardwareMap.get(CRServo.class, "frontLeftServo");
         backLeftServo = hardwareMap.get(CRServo.class, "backLeftServo");
@@ -148,27 +154,34 @@ public class SwerveTeleOp extends LinearOpMode {
                 backRightMotor.setPower(0);
             }
 
-            if (gamepad1.y) {
+            if (gamepad1.y && armAngle <= 1.0) {
                 armAngle += 0.01;
-            } else if(gamepad1.a) {
+            } else if(gamepad1.a && armAngle >= 0) {
                 armAngle -= 0.01;
             }
 
-            if (gamepad1.x) {
+            if (gamepad1.x && clawAngle <= 1.0) {
                 clawAngle += 0.01;
-            } else if(gamepad1.b) {
+            } else if(gamepad1.b && clawAngle >= 0) {
                 clawAngle -= 0.01;
             }
 
-            if (gamepad1.right_bumper) {
+            if (gamepad1.right_bumper && clawActuation <= 1.0) {
                 clawActuation += 0.01;
-            } else if(gamepad1.left_bumper) {
+            } else if(gamepad1.left_bumper && clawActuation >= 0) {
                 clawActuation -= 0.01;
+            }
+
+            if (gamepad1.dpad_down) {
+                slideMotorPosition += 25;
+            } else if (gamepad1.dpad_up) {
+                slideMotorPosition -= 25;
             }
 
             armRotator.setPosition(armAngle);
             clawRotator.setPosition(clawAngle);
             clawActuator.setPosition(clawActuation);
+            slideMotor.setTargetPosition(slideMotorPosition);
 
             telemetry.addData("Servo Power", pid_output1);
             telemetry.addData("EncoderBR", backRightEncoder.getVoltage() / 3.3);
