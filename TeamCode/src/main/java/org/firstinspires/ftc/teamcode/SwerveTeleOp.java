@@ -41,13 +41,13 @@ public class SwerveTeleOp extends LinearOpMode {
     private Servo clawActuator;
 
     public static double kp = 2;
-    public static double ki = 1;
+    public static double ki = 0.5;
     public static double kd = 0.0;
 
-    public static double offsetFR = 130;
-    public static double offsetBR = 210;
-    public static double offsetFL = 110;
-    public static double offsetBL = 20;
+    public static double offsetFR = -50;
+    public static double offsetBR = -60;
+    public static double offsetFL = 105;
+    public static double offsetBL = -10;
 
     public static double svP = 0;
 
