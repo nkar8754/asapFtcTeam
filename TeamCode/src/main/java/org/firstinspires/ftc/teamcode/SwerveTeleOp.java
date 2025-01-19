@@ -44,9 +44,9 @@ public class SwerveTeleOp extends LinearOpMode {
     public static double ki = 0.5;
     public static double kd = 0.0;
 
-    public static double offsetFR = -50;
+    public static double offsetFR = -40;
     public static double offsetBR = -60;
-    public static double offsetFL = 105;
+    public static double offsetFL = 100;
     public static double offsetBL = -10;
 
     public static double svP = 0;
