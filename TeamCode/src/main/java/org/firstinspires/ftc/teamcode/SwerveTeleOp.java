@@ -16,6 +16,17 @@ import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.hardware.Servo;
 
+import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
+import org.opencv.core.Mat;
+import org.opencv.core.Point;
+import org.opencv.core.Scalar;
+import org.opencv.imgproc.Imgproc;
+import org.openftc.easyopencv.OpenCvCamera;
+import org.openftc.easyopencv.OpenCvCameraFactory;
+import org.openftc.easyopencv.OpenCvCameraRotation;
+import org.openftc.easyopencv.OpenCvPipeline;
+import org.openftc.easyopencv.OpenCvWebcam;
+
 import org.firstinspires.ftc.robotcore.internal.usb.EthernetOverUsbSerialNumber;
 
 import java.util.ArrayList;
@@ -25,20 +36,17 @@ import java.util.Scanner;
 @Config
 @TeleOp
 public class SwerveTeleOp extends LinearOpMode {
+    OpenCvCamera camera;
+
     private DcMotor frontLeftMotor;
     private DcMotor backLeftMotor;
     private DcMotor frontRightMotor;
     private DcMotor backRightMotor;
-    private DcMotor slideMotor;
 
     private CRServo frontLeftServo;
     private CRServo backLeftServo;
     private CRServo frontRightServo;
     private CRServo backRightServo;
-
-    private Servo clawRotator;
-    private Servo armRotator;
-    private Servo clawActuator;
 
     public static double kp = 2;
     public static double ki = 0.5;
@@ -63,21 +71,12 @@ public class SwerveTeleOp extends LinearOpMode {
 
     private SwerveKinematics swerveController = new SwerveKinematics(234, 304.812);
 
-    double clawAngle = 0.0;
-    double armAngle = 0.0;
-    double clawActuation = 0.0;
-    int slideMotorPosition = 0;
-
     @Override
     public void runOpMode() {
         frontLeftMotor = hardwareMap.get(DcMotorEx.class, "frontLeftMotor");
         backLeftMotor = hardwareMap.get(DcMotorEx.class, "backLeftMotor");
         frontRightMotor = hardwareMap.get(DcMotorEx.class, "frontRightMotor");
         backRightMotor = hardwareMap.get(DcMotorEx.class, "backRightMotor");
-        slideMotor = hardwareMap.get(DcMotorEx.class, "slideMotor");
-        slideMotor.setTargetPosition(slideMotorPosition);
-        slideMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        slideMotor.setPower(0.6);
 
         frontLeftServo = hardwareMap.get(CRServo.class, "frontLeftServo");
         backLeftServo = hardwareMap.get(CRServo.class, "backLeftServo");
@@ -89,20 +88,30 @@ public class SwerveTeleOp extends LinearOpMode {
         frontLeftEncoder = hardwareMap.get(AnalogInput.class, "frontLeftEncoder");
         frontRightEncoder = hardwareMap.get(AnalogInput.class, "frontRightEncoder");
 
-        clawRotator = hardwareMap.get(Servo.class, "clawRotator");
-        armRotator = hardwareMap.get(Servo.class, "armRotator");
-        clawActuator = hardwareMap.get(Servo.class, "clawActuator");
-
         telemetry = new MultipleTelemetry(FtcDashboard.getInstance().getTelemetry(),telemetry);
-
         telemetry.addData("Status", "Initialized");
         telemetry.update();
 
-        // Wait for the game to start (driver presses PLAY)
-        waitForStart();
+        SamplePipeline pipeline = new SamplePipeline();
 
-        telemetry.addData("Status", "Running");
-        telemetry.update();
+        int cameraMonitorViewId = hardwareMap.appContext.getResources().getIdentifier("cameraMonitorViewId", "id", hardwareMap.appContext.getPackageName());
+        camera = OpenCvCameraFactory.getInstance().createWebcam(hardwareMap.get(WebcamName.class, "Webcam 1"), cameraMonitorViewId);
+        camera.setPipeline(pipeline);
+        camera.openCameraDeviceAsync(new OpenCvCamera.AsyncCameraOpenListener() {
+            @Override
+            public void onOpened() {
+                camera.startStreaming(320, 240, OpenCvCameraRotation.UPRIGHT);
+            }
+
+            @Override
+            public void onError(int errorCode) {
+                /*
+                 * This will be called if the camera could not be opened
+                 */
+            }
+        });
+
+        waitForStart();
 
         List<LynxModule> allHubs = hardwareMap.getAll(LynxModule.class);
 
@@ -154,48 +163,42 @@ public class SwerveTeleOp extends LinearOpMode {
                 backRightMotor.setPower(0);
             }
 
-            if (gamepad1.y && armAngle <= 1.0) {
-                armAngle += 0.01;
-            } else if(gamepad1.a && armAngle >= 0) {
-                armAngle -= 0.01;
-            }
-
-            if (gamepad1.x && clawAngle <= 1.0) {
-                clawAngle += 0.01;
-            } else if(gamepad1.b && clawAngle >= 0) {
-                clawAngle -= 0.01;
-            }
-
-            if (gamepad1.right_bumper && clawActuation <= 1.0) {
-                clawActuation += 0.01;
-            } else if(gamepad1.left_bumper && clawActuation >= 0) {
-                clawActuation -= 0.01;
-            }
-
-            if (gamepad1.dpad_down) {
-                slideMotorPosition += 25;
-            } else if (gamepad1.dpad_up) {
-                slideMotorPosition -= 25;
-            }
-
-            armRotator.setPosition(armAngle);
-            clawRotator.setPosition(clawAngle);
-            clawActuator.setPosition(clawActuation);
-            slideMotor.setTargetPosition(slideMotorPosition);
-
-            telemetry.addData("Servo Power", pid_output1);
-            telemetry.addData("EncoderBR", backRightEncoder.getVoltage() / 3.3);
-            telemetry.addData("EncoderBL", backLeftEncoder.getVoltage() / 3.3);
-            telemetry.addData("EncoderFR", frontRightEncoder.getVoltage() / 3.3);
-            telemetry.addData("EncoderFL", frontLeftEncoder.getVoltage() / 3.3);
-
-            telemetry.addData("w1", ((output.get(4) / Math.PI + 1) / 2));
-            telemetry.addData("w2", ((output.get(6) / Math.PI + 1) / 2));
-            telemetry.addData("w3", ((output.get(2) / Math.PI + 1) / 2));
-            telemetry.addData("w4", ((output.get(0) / Math.PI + 1) / 2));
-
-            telemetry.addData("Status", "Running");
+            telemetry.addData("Frame Count", camera.getFrameCount());
+            telemetry.addData("FPS", String.format("%.2f", camera.getFps()));
+            telemetry.addData("Total frame time ms", camera.getTotalFrameTimeMs());
+            telemetry.addData("Pipeline time ms", camera.getPipelineTimeMs());
+            telemetry.addData("Overhead time ms", camera.getOverheadTimeMs());
             telemetry.update();
+        }
+    }
+
+    class SamplePipeline extends OpenCvPipeline {
+        boolean viewportPaused;
+
+        @Override
+        public Mat processFrame(Mat input) {
+            Imgproc.rectangle(
+                    input,
+                    new Point(
+                            input.cols()/4,
+                            input.rows()/4),
+                    new Point(
+                            input.cols()*(3f/4f),
+                            input.rows()*(3f/4f)),
+                    new Scalar(0, 255, 0), 4);
+
+            return input;
+        }
+
+        @Override
+        public void onViewportTapped() {
+            viewportPaused = !viewportPaused;
+
+            if (viewportPaused) {
+                camera.pauseViewport();
+            } else {
+                camera.resumeViewport();
+            }
         }
     }
 }
