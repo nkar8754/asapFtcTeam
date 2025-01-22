@@ -17,19 +17,24 @@ import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.hardware.Servo;
 
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
+import org.opencv.core.Core;
 import org.opencv.core.Mat;
+import org.opencv.core.MatOfInt;
+import org.opencv.core.MatOfPoint;
+import org.opencv.core.MatOfPoint2f;
 import org.opencv.core.Point;
+import org.opencv.core.RotatedRect;
 import org.opencv.core.Scalar;
+import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
 import org.openftc.easyopencv.OpenCvCamera;
 import org.openftc.easyopencv.OpenCvCameraFactory;
 import org.openftc.easyopencv.OpenCvCameraRotation;
+import org.openftc.easyopencv.OpenCvInternalCamera2;
 import org.openftc.easyopencv.OpenCvPipeline;
-import org.openftc.easyopencv.OpenCvWebcam;
-
-import org.firstinspires.ftc.robotcore.internal.usb.EthernetOverUsbSerialNumber;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Scanner;
 
@@ -37,6 +42,8 @@ import java.util.Scanner;
 @TeleOp
 public class SwerveTeleOp extends LinearOpMode {
     OpenCvCamera camera;
+
+    public static int targetColor = 0;
 
     private DcMotor frontLeftMotor;
     private DcMotor backLeftMotor;
@@ -92,7 +99,7 @@ public class SwerveTeleOp extends LinearOpMode {
         telemetry.addData("Status", "Initialized");
         telemetry.update();
 
-        SamplePipeline pipeline = new SamplePipeline();
+        StoneOrientationAnalysisPipeline  pipeline = new StoneOrientationAnalysisPipeline();
 
         int cameraMonitorViewId = hardwareMap.appContext.getResources().getIdentifier("cameraMonitorViewId", "id", hardwareMap.appContext.getPackageName());
         camera = OpenCvCameraFactory.getInstance().createWebcam(hardwareMap.get(WebcamName.class, "Webcam 1"), cameraMonitorViewId);
@@ -172,32 +179,410 @@ public class SwerveTeleOp extends LinearOpMode {
         }
     }
 
-    class SamplePipeline extends OpenCvPipeline {
-        boolean viewportPaused;
+    static class StoneOrientationAnalysisPipeline extends OpenCvPipeline {
+        /*
+         * Our working image buffers
+         */
+        Mat colorMat = new Mat();
+        Mat thresholdMat = new Mat();
+        Mat morphedThreshold = new Mat();
+        Mat contoursOnPlainImageMat = new Mat();
+
+        /*
+         * Threshold values
+         */
+        static final int CB_CHAN_MASK_THRESHOLD = 80;
+        static final double DENSITY_UPRIGHT_THRESHOLD = 0.03;
+
+        /*
+         * The elements we use for noise reduction
+         */
+        Mat erodeElement = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new Size(3, 3));
+        Mat dilateElement = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new Size(6, 6));
+
+        /*
+         * Colors
+         */
+        static final Scalar TEAL = new Scalar(3, 148, 252);
+        static final Scalar PURPLE = new Scalar(158, 52, 235);
+        static final Scalar RED = new Scalar(255, 0, 0);
+        static final Scalar GREEN = new Scalar(0, 255, 0);
+        static final Scalar BLUE = new Scalar(0, 0, 255);
+
+        static final Scalar redLower = new Scalar(136, 87, 111);
+        static final Scalar redUpper = new Scalar(180, 255, 255);
+
+        static final Scalar greenLower = new Scalar(25, 52, 72);
+        static final Scalar greenUpper = new Scalar(102, 255, 255);
+
+        static final Scalar blueLower = new Scalar(94, 80, 2);
+        static final Scalar blueUpper = new Scalar(120, 255, 255);
+
+        static final int CONTOUR_LINE_THICKNESS = 2;
+
+        static class AnalyzedStone {
+            StoneOrientation orientation;
+            double angle;
+        }
+
+        enum StoneOrientation {
+            UPRIGHT,
+            NOT_UPRIGHT
+        }
+
+        ArrayList<AnalyzedStone> internalStoneList = new ArrayList<>();
+        volatile ArrayList<AnalyzedStone> clientStoneList = new ArrayList<>();
+
+        /*
+         * Some stuff to handle returning our various buffers
+         */
+        enum Stage {
+            FINAL,
+            Cb,
+            MASK,
+            MASK_NR,
+            CONTOURS;
+        }
+
+        Stage[] stages = Stage.values();
+
+        // Keep track of what stage the viewport is showing
+        int stageNum = 0;
+
+        @Override
+        public void onViewportTapped() {
+            /*
+             * Note that this method is invoked from the UI thread
+             * so whatever we do here, we must do quickly.
+             */
+
+            int nextStageNum = stageNum + 1;
+
+            if(nextStageNum >= stages.length) {
+                nextStageNum = 0;
+            }
+
+            stageNum = nextStageNum;
+        }
 
         @Override
         public Mat processFrame(Mat input) {
-            Imgproc.rectangle(
-                    input,
-                    new Point(
-                            input.cols()/4,
-                            input.rows()/4),
-                    new Point(
-                            input.cols()*(3f/4f),
-                            input.rows()*(3f/4f)),
-                    new Scalar(0, 255, 0), 4);
+            // We'll be updating this with new data below
+            internalStoneList.clear();
+
+            /*
+             * Run the image processing
+             */
+            for(MatOfPoint contour : findContours(input)) {
+                analyzeContour(contour, input);
+            }
+
+            clientStoneList = new ArrayList<>(internalStoneList);
+
+            /*
+             * Decide which buffer to send to the viewport
+             */
+            switch (stages[stageNum]) {
+                case Cb: {
+                    return colorMat;
+                }
+
+                case FINAL: {
+                    return input;
+                }
+
+                case MASK: {
+                    return thresholdMat;
+                }
+
+                case MASK_NR: {
+                    return morphedThreshold;
+                }
+
+                case CONTOURS: {
+                    return contoursOnPlainImageMat;
+                }
+            }
 
             return input;
         }
 
-        @Override
-        public void onViewportTapped() {
-            viewportPaused = !viewportPaused;
+        public ArrayList<AnalyzedStone> getDetectedStones() {
+            return clientStoneList;
+        }
 
-            if (viewportPaused) {
-                camera.pauseViewport();
+        ArrayList<MatOfPoint> findContours(Mat input) {
+            // A list we'll be using to store the contours we find
+            ArrayList<MatOfPoint> contoursList = new ArrayList<>();
+
+            Imgproc.cvtColor(input, colorMat, Imgproc.COLOR_RGB2HSV);
+
+            Scalar lower = null;
+            Scalar upper = null;
+
+            if (targetColor == 0) {
+                lower = redLower;
+                upper = redUpper;
+            } else if (targetColor == 1) {
+                lower = greenLower;
+                upper = greenUpper;
+            }  else if (targetColor == 2) {
+                lower = blueLower;
+                upper = blueUpper;
+            }
+
+            Mat mask = new Mat();
+            Core.inRange(colorMat, lower, upper, mask);
+
+            // Ok, now actually look for the contours! We only look for external contours.
+            Imgproc.findContours(mask, contoursList, new Mat(), Imgproc.RETR_TREE, Imgproc.CHAIN_APPROX_NONE);
+
+            // We do draw the contours we find, but not to the main input buffer.
+            input.copyTo(contoursOnPlainImageMat);
+            Imgproc.drawContours(contoursOnPlainImageMat, contoursList, -1, BLUE, CONTOUR_LINE_THICKNESS, 8);
+
+            return contoursList;
+        }
+
+        void morphMask(Mat input, Mat output) {
+            /*
+             * Apply some erosion and dilation for noise reduction
+             */
+
+            Imgproc.erode(input, output, erodeElement);
+            Imgproc.erode(output, output, erodeElement);
+
+            Imgproc.dilate(output, output, dilateElement);
+            Imgproc.dilate(output, output, dilateElement);
+        }
+
+        void analyzeContour(MatOfPoint contour, Mat input) {
+            // Transform the contour to a different format
+            Point[] points = contour.toArray();
+            MatOfPoint2f contour2f = new MatOfPoint2f(contour.toArray());
+
+            // Do a rect fit to the contour, and draw it on the screen
+            RotatedRect rotatedRectFitToContour = Imgproc.minAreaRect(contour2f);
+            drawRotatedRect(rotatedRectFitToContour, input);
+
+            // The angle OpenCV gives us can be ambiguous, so look at the shape of
+            // the rectangle to fix that.
+            double rotRectAngle = rotatedRectFitToContour.angle;
+            if (rotatedRectFitToContour.size.width < rotatedRectFitToContour.size.height) {
+                rotRectAngle += 90;
+            }
+
+            // Figure out the slope of a line which would run through the middle, lengthwise
+            // (Slope as in m from 'Y = mx + b')
+            double midlineSlope = Math.tan(Math.toRadians(rotRectAngle));
+
+            // We're going to split the this contour into two regions: one region for the points
+            // which fall above the midline, and one region for the points which fall below.
+            // We'll need a place to store the points as we split them, so we make ArrayLists
+            ArrayList<Point> aboveMidline = new ArrayList<>(points.length/2);
+            ArrayList<Point> belowMidline = new ArrayList<>(points.length/2);
+
+            // Ok, now actually split the contour into those two regions we discussed earlier!
+            for(Point p : points) {
+                if(rotatedRectFitToContour.center.y - p.y > midlineSlope * (rotatedRectFitToContour.center.x - p.x)) {
+                    aboveMidline.add(p);
+                } else {
+                    belowMidline.add(p);
+                }
+            }
+
+            // Now that we've split the contour into those two regions, we analyze each
+            // region independently.
+            ContourRegionAnalysis aboveMidlineMetrics = analyzeContourRegion(aboveMidline);
+            ContourRegionAnalysis belowMidlineMetrics = analyzeContourRegion(belowMidline);
+
+            if(aboveMidlineMetrics == null || belowMidlineMetrics == null) {
+                return; // Get out of dodge
+            }
+
+            // We're going to draw line from the center of the bounding rect, to outside the bounding rect, in the
+            // direction of the side of the stone with the nubs.
+            Point displOfOrientationLinePoint2 = computeDisplacementForSecondPointOfStoneOrientationLine(rotatedRectFitToContour, rotRectAngle);
+
+            /*
+             * If the difference in the densities of the two regions exceeds the threshold,
+             * then we assume the stone is on its side. Otherwise, if the difference is inside
+             * of the threshold, we assume it's upright.
+             */
+            if(aboveMidlineMetrics.density < belowMidlineMetrics.density - DENSITY_UPRIGHT_THRESHOLD) {
+                /*
+                 * Assume the stone is on its side, with the top contour region being the
+                 * one which contains the nubs
+                 */
+
+                // Draw that line we were just talking about
+                Imgproc.line(
+                        input, // Buffer we're drawing on
+                        new Point( // First point of the line (center of bounding rect)
+                                rotatedRectFitToContour.center.x,
+                                rotatedRectFitToContour.center.y),
+                        new Point( // Second point of the line (center - displacement we calculated earlier)
+                                rotatedRectFitToContour.center.x-displOfOrientationLinePoint2.x,
+                                rotatedRectFitToContour.center.y-displOfOrientationLinePoint2.y),
+                        PURPLE, // Color we're drawing the line in
+                        2); // Thickness of the line we're drawing
+
+                // We outline the contour region that we assumed to be the side with the nubs
+                Imgproc.drawContours(input, aboveMidlineMetrics.listHolderOfMatOfPoint, -1, TEAL, 2, 8);
+
+                // Compute the absolute angle of the stone
+                double angle = -(rotRectAngle-90);
+
+                // "Tag" the stone with text stating its absolute angle
+                drawTagText(rotatedRectFitToContour, Integer.toString((int) Math.round(angle))+" deg", input);
+
+                AnalyzedStone analyzedStone = new AnalyzedStone();
+                analyzedStone.angle = angle;
+                analyzedStone.orientation = StoneOrientation.NOT_UPRIGHT;
+                internalStoneList.add(analyzedStone);
+            } else if(belowMidlineMetrics.density < aboveMidlineMetrics.density - DENSITY_UPRIGHT_THRESHOLD) {
+                /*
+                 * Assume the stone is on its side, with the bottom contour region being the
+                 * one which contains the nubs
+                 */
+
+                // Draw that line we were just talking about
+                Imgproc.line(
+                        input, // Buffer we're drawing on
+                        new Point( // First point of the line (center + displacement we calculated earlier)
+                                rotatedRectFitToContour.center.x+displOfOrientationLinePoint2.x,
+                                rotatedRectFitToContour.center.y+displOfOrientationLinePoint2.y),
+                        new Point( // Second point of the line (center of bounding rect)
+                                rotatedRectFitToContour.center.x,
+                                rotatedRectFitToContour.center.y),
+                        PURPLE, // Color we're drawing the line in
+                        2); // Thickness of the line we're drawing
+
+                // We outline the contour region that we assumed to be the side with the nubs
+                Imgproc.drawContours(input, belowMidlineMetrics.listHolderOfMatOfPoint, -1, TEAL, 2, 8);
+
+                // Compute the absolute angle of the stone
+                double angle = -(rotRectAngle-270);
+
+                // "Tag" the stone with text stating its absolute angle
+                drawTagText(rotatedRectFitToContour,  Integer.toString((int) Math.round(angle))+" deg", input);
+
+                AnalyzedStone analyzedStone = new AnalyzedStone();
+                analyzedStone.angle = angle;
+                analyzedStone.orientation = StoneOrientation.NOT_UPRIGHT;
+                internalStoneList.add(analyzedStone);
             } else {
-                camera.resumeViewport();
+                /*
+                 * Assume the stone is upright
+                 */
+
+                drawTagText(rotatedRectFitToContour, "UPRIGHT", input);
+
+                AnalyzedStone analyzedStone = new AnalyzedStone();
+                analyzedStone.angle = rotRectAngle;
+                analyzedStone.orientation = StoneOrientation.UPRIGHT;
+                internalStoneList.add(analyzedStone);
+            }
+        }
+
+        static class ContourRegionAnalysis {
+            /*
+             * This class holds the results of analyzeContourRegion()
+             */
+
+            double hullArea;
+            double contourArea;
+            double density;
+            List<MatOfPoint> listHolderOfMatOfPoint;
+        }
+
+        static ContourRegionAnalysis analyzeContourRegion(ArrayList<Point> contourPoints) {
+            // drawContours() requires a LIST of contours (there's no singular drawContour()
+            // method), so we have to make a list, even though we're only going to use a single
+            // position in it...
+            MatOfPoint matOfPoint = new MatOfPoint();
+            matOfPoint.fromList(contourPoints);
+            List<MatOfPoint> listHolderOfMatOfPoint = Arrays.asList(matOfPoint);
+
+            // Compute the convex hull of the contour
+            MatOfInt hullMatOfInt = new MatOfInt();
+            Imgproc.convexHull(matOfPoint, hullMatOfInt);
+
+            // Was the convex hull calculation successful?
+            if(hullMatOfInt.toArray().length > 0) {
+                // The convex hull calculation tells us the INDEX of the points which
+                // which were passed in eariler which form the convex hull. That's all
+                // well and good, but now we need filter out that original list to find
+                // the actual POINTS which form the convex hull
+                Point[] hullPoints = new Point[hullMatOfInt.rows()];
+                List<Integer> hullContourIdxList = hullMatOfInt.toList();
+
+                for (int i = 0; i < hullContourIdxList.size(); i++) {
+                    hullPoints[i] = contourPoints.get(hullContourIdxList.get(i));
+                }
+
+                ContourRegionAnalysis analysis = new ContourRegionAnalysis();
+                analysis.listHolderOfMatOfPoint = listHolderOfMatOfPoint;
+
+                // Compute the hull area
+                analysis.hullArea = Imgproc.contourArea(new MatOfPoint(hullPoints));
+
+                // Compute the original contour area
+                analysis.contourArea = Imgproc.contourArea(listHolderOfMatOfPoint.get(0));
+
+                // Compute the contour density. This is the ratio of the contour area to the
+                // area of the convex hull formed by the contour
+                analysis.density = analysis.contourArea / analysis.hullArea;
+
+                return analysis;
+            } else {
+                return null;
+            }
+        }
+
+        static Point computeDisplacementForSecondPointOfStoneOrientationLine(RotatedRect rect, double unambiguousAngle) {
+            // Note: we return a point, but really it's not a point in space, we're
+            // simply using it to hold X & Y displacement values from the middle point
+            // of the bounding rect.
+            Point point = new Point();
+
+            // Figure out the length of the short side of the rect
+            double shortSideLen = Math.min(rect.size.width, rect.size.height);
+
+            // We draw a line that's 3/4 of the length of the short side of the rect
+            double lineLength = shortSideLen * .75;
+
+            // The line is to be drawn at 90 deg relative to the midline running through
+            // the rect lengthwise
+            point.x = (int) (lineLength * Math.cos(Math.toRadians(unambiguousAngle+90)));
+            point.y = (int) (lineLength * Math.sin(Math.toRadians(unambiguousAngle+90)));
+
+            return point;
+        }
+
+        static void drawTagText(RotatedRect rect, String text, Mat mat) {
+            Imgproc.putText(
+                    mat, // The buffer we're drawing on
+                    text, // The text we're drawing
+                    new Point( // The anchor point for the text
+                            rect.center.x-50,  // x anchor point
+                            rect.center.y+25), // y anchor point
+                    Imgproc.FONT_HERSHEY_PLAIN, // Font
+                    1, // Font size
+                    TEAL, // Font color
+                    1); // Font thickness
+        }
+
+        static void drawRotatedRect(RotatedRect rect, Mat drawOn) {
+            /*
+             * Draws a rotated rect by drawing each of the 4 lines individually
+             */
+
+            Point[] points = new Point[4];
+            rect.points(points);
+
+            for(int i = 0; i < 4; i++) {
+                Imgproc.line(drawOn, points[i], points[(i+1)%4], RED, 2);
             }
         }
     }
