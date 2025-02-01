@@ -18,6 +18,7 @@ import com.qualcomm.robotcore.hardware.Servo;
 
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
 import org.opencv.core.Core;
+import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfInt;
 import org.opencv.core.MatOfPoint;
@@ -183,6 +184,7 @@ public class SwerveTeleOp extends LinearOpMode {
         /*
          * Our working image buffers
          */
+
         Mat colorMat = new Mat();
         Mat thresholdMat = new Mat();
         Mat morphedThreshold = new Mat();
@@ -209,14 +211,14 @@ public class SwerveTeleOp extends LinearOpMode {
         static final Scalar GREEN = new Scalar(0, 255, 0);
         static final Scalar BLUE = new Scalar(0, 0, 255);
 
-        static final Scalar redLower = new Scalar(136, 87, 111);
-        static final Scalar redUpper = new Scalar(180, 255, 255);
+        static final Scalar redLower = new Scalar(0, 50, 50);
+        static final Scalar redUpper = new Scalar(255, 200, 255);
 
-        static final Scalar greenLower = new Scalar(25, 52, 72);
+        static final Scalar greenLower = new Scalar(20, 200, 50);
         static final Scalar greenUpper = new Scalar(102, 255, 255);
 
-        static final Scalar blueLower = new Scalar(94, 80, 2);
-        static final Scalar blueUpper = new Scalar(120, 255, 255);
+        static final Scalar blueLower = new Scalar(80, 100, 100);
+        static final Scalar blueUpper = new Scalar(255, 255, 255);
 
         static final int CONTOUR_LINE_THICKNESS = 2;
 
@@ -326,16 +328,14 @@ public class SwerveTeleOp extends LinearOpMode {
             } else if (targetColor == 1) {
                 lower = greenLower;
                 upper = greenUpper;
-            }  else if (targetColor == 2) {
+            } else if (targetColor == 2) {
                 lower = blueLower;
                 upper = blueUpper;
             }
 
-            Mat mask = new Mat();
-            Core.inRange(colorMat, lower, upper, mask);
-
-            // Ok, now actually look for the contours! We only look for external contours.
-            Imgproc.findContours(mask, contoursList, new Mat(), Imgproc.RETR_TREE, Imgproc.CHAIN_APPROX_NONE);
+            Core.inRange(colorMat, lower, upper, thresholdMat);
+            morphMask(thresholdMat, morphedThreshold);
+            Imgproc.findContours(morphedThreshold, contoursList, new Mat(), Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_NONE);
 
             // We do draw the contours we find, but not to the main input buffer.
             input.copyTo(contoursOnPlainImageMat);
