@@ -3,7 +3,19 @@ import static org.firstinspires.ftc.teamcode.MathFunctions.AngleWrap;
 
 import com.qualcomm.robotcore.util.Range;
 
+import java.util.ArrayList;
+
 public class RobotMovement {
+
+
+    public static CurvePoint getFollowPointPath(ArrayList<CurvePoint> pathPoints, double xPos, double yPos, double followRadius){
+        CurvePoint followMe = new CurvePoint(pathPoints.get(0));
+    }
+
+
+
+
+
     double worldXPosition = 0;
     double worldYPosition = 0;
     double worldAngle_rad = (-180);
