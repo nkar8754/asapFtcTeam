@@ -211,8 +211,10 @@ public class SwerveTeleOp extends LinearOpMode {
         static final Scalar GREEN = new Scalar(0, 255, 0);
         static final Scalar BLUE = new Scalar(0, 0, 255);
 
-        static final Scalar redLower = new Scalar(0, 50, 50);
-        static final Scalar redUpper = new Scalar(255, 200, 255);
+        static final Scalar redLower = new Scalar(0, 70, 50);
+        static final Scalar redUpper = new Scalar(10, 255, 255);
+        static final Scalar redLower1 = new Scalar(170, 70, 50);
+        static final Scalar redUpper1 = new Scalar(180, 255, 255);
 
         static final Scalar greenLower = new Scalar(20, 200, 50);
         static final Scalar greenUpper = new Scalar(102, 255, 255);
@@ -334,6 +336,13 @@ public class SwerveTeleOp extends LinearOpMode {
             }
 
             Core.inRange(colorMat, lower, upper, thresholdMat);
+
+            if (targetColor == 0) {
+                Mat thresholdMat1 = new Mat();
+                Core.inRange(colorMat, redLower1, redUpper1, thresholdMat1);
+                Core.bitwise_or(thresholdMat, thresholdMat1, thresholdMat);
+            }
+
             morphMask(thresholdMat, morphedThreshold);
             Imgproc.findContours(morphedThreshold, contoursList, new Mat(), Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_NONE);
 
