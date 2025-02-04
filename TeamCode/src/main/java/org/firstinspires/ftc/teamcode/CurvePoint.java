@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode;
 
+import org.opencv.core.Point;
+
 public class CurvePoint {
     public double x;
     public double y;
@@ -32,4 +34,12 @@ public class CurvePoint {
         pointLength = thisPoint.pointLength;
     }
 
+    public Point toPoint(){
+        return new Point(x, y);
+    }
+
+    public void setPoint(Point point){
+        x = point.x;
+        y = point.y;
+    }
 }

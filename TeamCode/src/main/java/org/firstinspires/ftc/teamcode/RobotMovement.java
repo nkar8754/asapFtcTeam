@@ -1,24 +1,58 @@
 package org.firstinspires.ftc.teamcode;
 import static org.firstinspires.ftc.teamcode.MathFunctions.AngleWrap;
+import static org.firstinspires.ftc.teamcode.MathFunctions.lineCircleIntersection;
 
 import com.qualcomm.robotcore.util.Range;
+
+import org.opencv.core.Point;
 
 import java.util.ArrayList;
 
 public class RobotMovement {
 
 
-    public static CurvePoint getFollowPointPath(ArrayList<CurvePoint> pathPoints, double xPos, double yPos, double followRadius){
-        CurvePoint followMe = new CurvePoint(pathPoints.get(0));
+    public static void followCurve(ArrayList<CurvePoint> allPoints, double followAngle){
+        for(int i = 0; i < allPoints.size() - 1; i ++){
+
+        }
     }
 
 
 
 
 
-    double worldXPosition = 0;
-    double worldYPosition = 0;
-    double worldAngle_rad = (-180);
+    public static CurvePoint getFollowPointPath(ArrayList<CurvePoint> pathPoints, Point robotLocation, double followRadius){
+        CurvePoint followMe = new CurvePoint(pathPoints.get(0));
+
+        for(int i = 0; i < pathPoints.size() - 1; i ++){
+            CurvePoint startLine = pathPoints.get(i);
+            CurvePoint endLine = pathPoints.get(i + 1);
+
+            ArrayList<Point> intersections = lineCircleIntersection(robotLocation, followRadius, startLine.toPoint(),
+                    endLine.toPoint());
+
+            double closestAngle = 1000;
+
+            for(Point thisIntersection : intersections){
+                double angle = Math.atan2(thisIntersection.y - worldYPosition, thisIntersection.x - worldXPosition);
+                double deltaAngle = Math.abs(MathFunctions.AngleWrap(angle - worldAngle_rad));
+
+                if(deltaAngle < closestAngle){
+                    closestAngle = deltaAngle;
+                    followMe.setPoint(thisIntersection);
+                }
+            }
+        }
+        return followMe;
+    }
+
+
+
+
+
+    static double worldXPosition = 0;
+    static double worldYPosition = 0;
+    static double worldAngle_rad = (-180);
 
     public void goToPosition(double x, double y, double movementSpeed, double preferredAngle, double turnSpeed){
 
