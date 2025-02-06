@@ -17,6 +17,10 @@ import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.hardware.Servo;
 
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
+import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import com.qualcomm.hardware.sparkfun.SparkFunOTOS;
+
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
@@ -43,6 +47,8 @@ import java.util.Scanner;
 @TeleOp
 public class SwerveTeleOp extends LinearOpMode {
     OpenCvCamera camera;
+    SparkFunOTOS odometry;
+    SparkFunOTOS.Pose2D odoPos;
 
     public static int targetColor = 0;
 
@@ -65,17 +71,15 @@ public class SwerveTeleOp extends LinearOpMode {
     public static double offsetFL = 100;
     public static double offsetBL = -150;
 
-    public static double svP = 0;
-
     AnalogInput backLeftEncoder;
     AnalogInput backRightEncoder;
     AnalogInput frontLeftEncoder;
     AnalogInput frontRightEncoder;
 
-    private PidController pidController1 = new PidController(kp, ki, kd);
-    private PidController pidController2 = new PidController(kp, ki, kd);
-    private PidController pidController3 = new PidController(kp, ki, kd);
-    private PidController pidController4 = new PidController(kp, ki, kd);
+    private PidController pidController1;
+    private PidController pidController2;
+    private PidController pidController3;
+    private PidController pidController4;
 
     private SwerveKinematics swerveController = new SwerveKinematics(234, 304.812);
 
@@ -119,7 +123,22 @@ public class SwerveTeleOp extends LinearOpMode {
             }
         });
 
+        odometry = hardwareMap.get(SparkFunOTOS.class, "sensor_otos");
+        odometry.setLinearUnit(DistanceUnit.INCH);
+        odometry.setAngularUnit(AngleUnit.DEGREES);
+        odometry.setLinearScalar(1.008);
+        odometry.setAngularScalar(0.992);
+        odometry.calibrateImu();
+        odometry.resetTracking();
+        SparkFunOTOS.Pose2D currentPosition = new SparkFunOTOS.Pose2D(0, 0, 0);
+        odometry.setPosition(currentPosition);
+
         waitForStart();
+
+        pidController1 = new PidController(kp, ki, kd);
+        pidController2 = new PidController(kp, ki, kd);
+        pidController3 = new PidController(kp, ki, kd);
+        pidController4 = new PidController(kp, ki, kd);
 
         List<LynxModule> allHubs = hardwareMap.getAll(LynxModule.class);
 
@@ -171,40 +190,31 @@ public class SwerveTeleOp extends LinearOpMode {
                 backRightMotor.setPower(0);
             }
 
+            odoPos = odometry.getPosition();
+
             telemetry.addData("Frame Count", camera.getFrameCount());
             telemetry.addData("FPS", String.format("%.2f", camera.getFps()));
             telemetry.addData("Total frame time ms", camera.getTotalFrameTimeMs());
             telemetry.addData("Pipeline time ms", camera.getPipelineTimeMs());
             telemetry.addData("Overhead time ms", camera.getOverheadTimeMs());
+            telemetry.addData("Position X: ", odoPos.x);
+            telemetry.addData("Position Y: ", odoPos.y);
             telemetry.update();
         }
     }
 
     static class StoneOrientationAnalysisPipeline extends OpenCvPipeline {
-        /*
-         * Our working image buffers
-         */
-
         Mat colorMat = new Mat();
         Mat thresholdMat = new Mat();
+        Mat thresholdMat1 = new Mat();
         Mat morphedThreshold = new Mat();
         Mat contoursOnPlainImageMat = new Mat();
 
-        /*
-         * Threshold values
-         */
-        static final int CB_CHAN_MASK_THRESHOLD = 80;
         static final double DENSITY_UPRIGHT_THRESHOLD = 0.03;
 
-        /*
-         * The elements we use for noise reduction
-         */
         Mat erodeElement = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new Size(3, 3));
         Mat dilateElement = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new Size(6, 6));
 
-        /*
-         * Colors
-         */
         static final Scalar TEAL = new Scalar(3, 148, 252);
         static final Scalar PURPLE = new Scalar(158, 52, 235);
         static final Scalar RED = new Scalar(255, 0, 0);
@@ -338,7 +348,6 @@ public class SwerveTeleOp extends LinearOpMode {
             Core.inRange(colorMat, lower, upper, thresholdMat);
 
             if (targetColor == 0) {
-                Mat thresholdMat1 = new Mat();
                 Core.inRange(colorMat, redLower1, redUpper1, thresholdMat1);
                 Core.bitwise_or(thresholdMat, thresholdMat1, thresholdMat);
             }
