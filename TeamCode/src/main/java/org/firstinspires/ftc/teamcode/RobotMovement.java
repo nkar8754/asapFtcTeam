@@ -12,9 +12,10 @@ public class RobotMovement {
 
 
     public static void followCurve(ArrayList<CurvePoint> allPoints, double followAngle){
-        for(int i = 0; i < allPoints.size() - 1; i ++){
 
-        }
+        CurvePoint followMe = getFollowPointPath(allPoints, new Point(worldXPosition, worldYPosition), allPoints.get(0).followDistance);
+
+        goToPosition(followMe.x, followMe.y, followMe.moveSpeed, followAngle, followMe.turnSpeed);
     }
 
 
@@ -54,7 +55,7 @@ public class RobotMovement {
     static double worldYPosition = 0;
     static double worldAngle_rad = (-180);
 
-    public void goToPosition(double x, double y, double movementSpeed, double preferredAngle, double turnSpeed){
+    public static void goToPosition(double x, double y, double movementSpeed, double preferredAngle, double turnSpeed){
 
         double distanceToTarget = Math.hypot(x - worldXPosition, y - worldYPosition);
 
