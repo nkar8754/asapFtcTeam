@@ -211,7 +211,7 @@ public class SwerveTeleOp extends LinearOpMode {
 
             if (gamepad2.a && inclinationAngle <= 1.0) {
                 inclinationAngle += 0.05;
-            } else if (gamepad2.y && inclinationAngle >= 0.37) {
+            } else if (gamepad2.y && inclinationAngle >= 0.00) {
                 inclinationAngle -= 0.05;
             }
 
