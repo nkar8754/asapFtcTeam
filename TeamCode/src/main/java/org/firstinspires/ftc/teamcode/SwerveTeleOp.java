@@ -70,7 +70,7 @@ public class SwerveTeleOp extends LinearOpMode {
     private int slidePos = 0;
     private double clawAngle = -0.37;
     private double inclinationAngle = 0;
-    private double wristAngle = 1;
+    private double wristAngle = 0.96;
 
     private DcMotor frontLeftMotor;
     private DcMotor backLeftMotor;
@@ -210,9 +210,9 @@ public class SwerveTeleOp extends LinearOpMode {
             }
 
             if (gamepad2.a && inclinationAngle <= 1.0) {
-                inclinationAngle += 0.01;
-            } else if (gamepad2.y && inclinationAngle >= -1.0) {
-                inclinationAngle -= 0.01;
+                inclinationAngle += 0.05;
+            } else if (gamepad2.y && inclinationAngle >= 0.37) {
+                inclinationAngle -= 0.05;
             }
 
             if (gamepad2.x && wristAngle <= 1.0) {
@@ -222,9 +222,9 @@ public class SwerveTeleOp extends LinearOpMode {
             }
 
             if (gamepad2.right_bumper && clawAngle <= 1.0) {
-                clawAngle += 0.01;
-            } else if (gamepad2.left_bumper && clawAngle >= -1.0) {
-                clawAngle -= 0.01;
+                clawAngle += 0.05;
+            } else if (gamepad2.left_bumper && clawAngle >= -0.37) {
+                clawAngle -= 0.05;
             }
 
             inclination.setPosition(inclinationAngle);
