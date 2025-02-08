@@ -14,6 +14,7 @@ import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
 //import com.arcrobotics.ftclib.geometry.Translation2d;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.hardware.lynx.LynxModule;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.Servo;
 
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
@@ -52,6 +53,25 @@ public class SwerveTeleOp extends LinearOpMode {
 
     public static int targetColor = 0;
 
+    static class AnalyzedStone {
+        RotatedRect rect;
+        double angle;
+    }
+
+    static ArrayList<AnalyzedStone> internalStoneList = new ArrayList<>();
+    static volatile ArrayList<AnalyzedStone> clientStoneList = new ArrayList<>();
+
+    private DcMotor slide1;
+    private DcMotor slide2;
+    private Servo inclination;
+    private Servo wrist;
+    private Servo claw;
+
+    private int slidePos = 0;
+    private double clawAngle = -0.37;
+    private double inclinationAngle = 0;
+    private double wristAngle = 1;
+
     private DcMotor frontLeftMotor;
     private DcMotor backLeftMotor;
     private DcMotor frontRightMotor;
@@ -85,6 +105,22 @@ public class SwerveTeleOp extends LinearOpMode {
 
     @Override
     public void runOpMode() {
+        slide1 = hardwareMap.get(DcMotorEx.class, "slide1");
+        slide2 = hardwareMap.get(DcMotorEx.class, "slide2");
+        slide1.setTargetPosition(slidePos);
+        slide2.setTargetPosition(slidePos);
+        slide1.setPower(1);
+        slide2.setPower(1);
+        slide2.setDirection(DcMotorSimple.Direction.REVERSE);
+        slide1.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        slide2.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        slide1.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        slide2.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+
+        inclination = hardwareMap.get(Servo.class, "inclination");
+        wrist = hardwareMap.get(Servo.class, "wrist");
+        claw = hardwareMap.get(Servo.class, "claw");
+
         frontLeftMotor = hardwareMap.get(DcMotorEx.class, "frontLeftMotor");
         backLeftMotor = hardwareMap.get(DcMotorEx.class, "backLeftMotor");
         frontRightMotor = hardwareMap.get(DcMotorEx.class, "frontRightMotor");
@@ -165,41 +201,70 @@ public class SwerveTeleOp extends LinearOpMode {
             pidController4.Kd = kd;
 
             ArrayList<Double> output = swerveController.getVelocities(-gamepad1.left_stick_y / 1.5, gamepad1.left_stick_x / 1.5, -gamepad1.right_stick_x / 360);
+            drive(output);
 
-            double pid_output1 = -pidController1.calculate((((output.get(2) / Math.PI) + 1) / 2 + offsetBL / 360) % 1, (backLeftEncoder.getVoltage() / 3.3));
-            backLeftServo.setPower(pid_output1 * 2);
-
-            double pid_output2 = -pidController2.calculate((((output.get(0) / Math.PI) + 1) / 2 + offsetBR / 360) % 1, (backRightEncoder.getVoltage() / 3.3));
-            backRightServo.setPower(pid_output2 * 2);
-
-            double pid_output3 = -pidController3.calculate((((output.get(4) / Math.PI) + 1) / 2 + offsetFL / 360) % 1, (frontLeftEncoder.getVoltage() / 3.3));
-            frontLeftServo.setPower(pid_output3 * 2);
-
-            double pid_output4 = -pidController4.calculate((((output.get(6) / Math.PI) + 1) / 2 + offsetFR / 360) % 1, (frontRightEncoder.getVoltage() / 3.3));
-            frontRightServo.setPower(pid_output4 * 2);
-
-            if (Math.abs(pid_output1) < 0.3 && Math.abs(pid_output2) < 0.3 && Math.abs(pid_output3) < 0.3 && Math.abs(pid_output4) < 0.3) {
-                frontLeftMotor.setPower(output.get(5));
-                backLeftMotor.setPower(output.get(3));
-                frontRightMotor.setPower(output.get(7));
-                backRightMotor.setPower(output.get(1));
-            } else {
-                frontLeftMotor.setPower(0);
-                backLeftMotor.setPower(0);
-                frontRightMotor.setPower(0);
-                backRightMotor.setPower(0);
+            if (gamepad2.dpad_up) {
+                slidePos += 7;
+            } else if (gamepad2.dpad_down) {
+                slidePos -= 7;
             }
 
-            odoPos = odometry.getPosition();
+            if (gamepad2.a && inclinationAngle <= 1.0) {
+                inclinationAngle += 0.01;
+            } else if (gamepad2.y && inclinationAngle >= -1.0) {
+                inclinationAngle -= 0.01;
+            }
 
-            telemetry.addData("Frame Count", camera.getFrameCount());
-            telemetry.addData("FPS", String.format("%.2f", camera.getFps()));
-            telemetry.addData("Total frame time ms", camera.getTotalFrameTimeMs());
-            telemetry.addData("Pipeline time ms", camera.getPipelineTimeMs());
-            telemetry.addData("Overhead time ms", camera.getOverheadTimeMs());
-            telemetry.addData("Position X: ", odoPos.x);
-            telemetry.addData("Position Y: ", odoPos.y);
+            if (gamepad2.x && wristAngle <= 1.0) {
+                wristAngle += 0.01;
+            } else if (gamepad2.b && wristAngle >= -1.0) {
+                wristAngle -= 0.01;
+            }
+
+            if (gamepad2.right_bumper && clawAngle <= 1.0) {
+                clawAngle += 0.01;
+            } else if (gamepad2.left_bumper && clawAngle >= -1.0) {
+                clawAngle -= 0.01;
+            }
+
+            inclination.setPosition(inclinationAngle);
+            wrist.setPosition(wristAngle);
+            claw.setPosition(clawAngle);
+
+            slide1.setTargetPosition(slidePos);
+            slide2.setTargetPosition(slidePos);
+
+            telemetry.addData("slidePos: ", slidePos);
+            telemetry.addData("inclination: ", inclinationAngle);
+            telemetry.addData("wrist: ", wristAngle);
+            telemetry.addData("claw: ", clawAngle);
             telemetry.update();
+        }
+    }
+
+    public void drive(ArrayList<Double> output) {
+        double pid_output1 = -pidController1.calculate((((output.get(2) / Math.PI) + 1) / 2 + offsetBL / 360) % 1, (backLeftEncoder.getVoltage() / 3.3));
+        backLeftServo.setPower(pid_output1 * 2);
+
+        double pid_output2 = -pidController2.calculate((((output.get(0) / Math.PI) + 1) / 2 + offsetBR / 360) % 1, (backRightEncoder.getVoltage() / 3.3));
+        backRightServo.setPower(pid_output2 * 2);
+
+        double pid_output3 = -pidController3.calculate((((output.get(4) / Math.PI) + 1) / 2 + offsetFL / 360) % 1, (frontLeftEncoder.getVoltage() / 3.3));
+        frontLeftServo.setPower(pid_output3 * 2);
+
+        double pid_output4 = -pidController4.calculate((((output.get(6) / Math.PI) + 1) / 2 + offsetFR / 360) % 1, (frontRightEncoder.getVoltage() / 3.3));
+        frontRightServo.setPower(pid_output4 * 2);
+
+        if (Math.abs(pid_output1) < 0.3 && Math.abs(pid_output2) < 0.3 && Math.abs(pid_output3) < 0.3 && Math.abs(pid_output4) < 0.3) {
+            frontLeftMotor.setPower(output.get(5));
+            backLeftMotor.setPower(output.get(3));
+            frontRightMotor.setPower(output.get(7));
+            backRightMotor.setPower(output.get(1));
+        } else {
+            frontLeftMotor.setPower(0);
+            backLeftMotor.setPower(0);
+            frontRightMotor.setPower(0);
+            backRightMotor.setPower(0);
         }
     }
 
@@ -233,19 +298,6 @@ public class SwerveTeleOp extends LinearOpMode {
         static final Scalar blueUpper = new Scalar(255, 255, 255);
 
         static final int CONTOUR_LINE_THICKNESS = 2;
-
-        static class AnalyzedStone {
-            StoneOrientation orientation;
-            double angle;
-        }
-
-        enum StoneOrientation {
-            UPRIGHT,
-            NOT_UPRIGHT
-        }
-
-        ArrayList<AnalyzedStone> internalStoneList = new ArrayList<>();
-        volatile ArrayList<AnalyzedStone> clientStoneList = new ArrayList<>();
 
         /*
          * Some stuff to handle returning our various buffers
@@ -422,85 +474,27 @@ public class SwerveTeleOp extends LinearOpMode {
             // direction of the side of the stone with the nubs.
             Point displOfOrientationLinePoint2 = computeDisplacementForSecondPointOfStoneOrientationLine(rotatedRectFitToContour, rotRectAngle);
 
-            /*
-             * If the difference in the densities of the two regions exceeds the threshold,
-             * then we assume the stone is on its side. Otherwise, if the difference is inside
-             * of the threshold, we assume it's upright.
-             */
-            if(aboveMidlineMetrics.density < belowMidlineMetrics.density - DENSITY_UPRIGHT_THRESHOLD) {
-                /*
-                 * Assume the stone is on its side, with the top contour region being the
-                 * one which contains the nubs
-                 */
+            // Draw that line we were just talking about
+            Imgproc.line(
+                    input, // Buffer we're drawing on
+                    new Point( // First point of the line (center of bounding rect)
+                            rotatedRectFitToContour.center.x,
+                            rotatedRectFitToContour.center.y),
+                    new Point(
+                            rotatedRectFitToContour.center.x-displOfOrientationLinePoint2.x,
+                            rotatedRectFitToContour.center.y-displOfOrientationLinePoint2.y),
+                    PURPLE,
+                    2);
 
-                // Draw that line we were just talking about
-                Imgproc.line(
-                        input, // Buffer we're drawing on
-                        new Point( // First point of the line (center of bounding rect)
-                                rotatedRectFitToContour.center.x,
-                                rotatedRectFitToContour.center.y),
-                        new Point( // Second point of the line (center - displacement we calculated earlier)
-                                rotatedRectFitToContour.center.x-displOfOrientationLinePoint2.x,
-                                rotatedRectFitToContour.center.y-displOfOrientationLinePoint2.y),
-                        PURPLE, // Color we're drawing the line in
-                        2); // Thickness of the line we're drawing
-
-                // We outline the contour region that we assumed to be the side with the nubs
                 Imgproc.drawContours(input, aboveMidlineMetrics.listHolderOfMatOfPoint, -1, TEAL, 2, 8);
 
-                // Compute the absolute angle of the stone
                 double angle = -(rotRectAngle-90);
-
-                // "Tag" the stone with text stating its absolute angle
                 drawTagText(rotatedRectFitToContour, Integer.toString((int) Math.round(angle))+" deg", input);
 
                 AnalyzedStone analyzedStone = new AnalyzedStone();
                 analyzedStone.angle = angle;
-                analyzedStone.orientation = StoneOrientation.NOT_UPRIGHT;
+                analyzedStone.rect = rotatedRectFitToContour;
                 internalStoneList.add(analyzedStone);
-            } else if(belowMidlineMetrics.density < aboveMidlineMetrics.density - DENSITY_UPRIGHT_THRESHOLD) {
-                /*
-                 * Assume the stone is on its side, with the bottom contour region being the
-                 * one which contains the nubs
-                 */
-
-                // Draw that line we were just talking about
-                Imgproc.line(
-                        input, // Buffer we're drawing on
-                        new Point( // First point of the line (center + displacement we calculated earlier)
-                                rotatedRectFitToContour.center.x+displOfOrientationLinePoint2.x,
-                                rotatedRectFitToContour.center.y+displOfOrientationLinePoint2.y),
-                        new Point( // Second point of the line (center of bounding rect)
-                                rotatedRectFitToContour.center.x,
-                                rotatedRectFitToContour.center.y),
-                        PURPLE, // Color we're drawing the line in
-                        2); // Thickness of the line we're drawing
-
-                // We outline the contour region that we assumed to be the side with the nubs
-                Imgproc.drawContours(input, belowMidlineMetrics.listHolderOfMatOfPoint, -1, TEAL, 2, 8);
-
-                // Compute the absolute angle of the stone
-                double angle = -(rotRectAngle-270);
-
-                // "Tag" the stone with text stating its absolute angle
-                drawTagText(rotatedRectFitToContour,  Integer.toString((int) Math.round(angle))+" deg", input);
-
-                AnalyzedStone analyzedStone = new AnalyzedStone();
-                analyzedStone.angle = angle;
-                analyzedStone.orientation = StoneOrientation.NOT_UPRIGHT;
-                internalStoneList.add(analyzedStone);
-            } else {
-                /*
-                 * Assume the stone is upright
-                 */
-
-                drawTagText(rotatedRectFitToContour, "UPRIGHT", input);
-
-                AnalyzedStone analyzedStone = new AnalyzedStone();
-                analyzedStone.angle = rotRectAngle;
-                analyzedStone.orientation = StoneOrientation.UPRIGHT;
-                internalStoneList.add(analyzedStone);
-            }
         }
 
         static class ContourRegionAnalysis {
