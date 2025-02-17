@@ -51,7 +51,7 @@ public class SwerveTeleOp extends LinearOpMode {
     SparkFunOTOS odometry;
     SparkFunOTOS.Pose2D odoPos;
 
-    public static int targetColor = 0;
+    public static int targetColor = 2;
 
     static class AnalyzedStone {
         RotatedRect rect;
@@ -64,7 +64,7 @@ public class SwerveTeleOp extends LinearOpMode {
     private DcMotor slide1;
     private DcMotor slide2;
     private Servo inclination;
-    private CRServo wrist;
+    private Servo wrist;
     private Servo claw;
 
     private int slidePos = 0;
@@ -100,7 +100,6 @@ public class SwerveTeleOp extends LinearOpMode {
     private PidController pidController2;
     private PidController pidController3;
     private PidController pidController4;
-    private PidController wristController;
 
     private SwerveKinematics swerveController = new SwerveKinematics(234, 304.812);
 
@@ -119,7 +118,7 @@ public class SwerveTeleOp extends LinearOpMode {
         slide2.setMode(DcMotor.RunMode.RUN_TO_POSITION);
 
         inclination = hardwareMap.get(Servo.class, "inclination");
-        wrist = hardwareMap.get(CRServo.class, "wrist");
+        wrist = hardwareMap.get(Servo.class, "wrist");
         claw = hardwareMap.get(Servo.class, "claw");
 
         frontLeftMotor = hardwareMap.get(DcMotorEx.class, "frontLeftMotor");
@@ -176,7 +175,6 @@ public class SwerveTeleOp extends LinearOpMode {
         pidController2 = new PidController(kp, ki, kd);
         pidController3 = new PidController(kp, ki, kd);
         pidController4 = new PidController(kp, ki, kd);
-        wristController = new PidController(kp, ki, kd);
 
         List<LynxModule> allHubs = hardwareMap.getAll(LynxModule.class);
 
@@ -201,9 +199,6 @@ public class SwerveTeleOp extends LinearOpMode {
             pidController4.Kp = kp;
             pidController4.Ki = ki;
             pidController4.Kd = kd;
-            wristController.Kp = kp;
-            wristController.Ki = ki;
-            wristController.Kd = kd;
 
             ArrayList<Double> output = swerveController.getVelocities(-gamepad1.left_stick_y / 1.5, gamepad1.left_stick_x / 1.5, -gamepad1.right_stick_x / 360);
             drive(output);
@@ -249,10 +244,8 @@ public class SwerveTeleOp extends LinearOpMode {
 
             if (smallestIndex != -1) {
                 AnalyzedStone targetObject = clientStoneList.get(smallestIndex);
-                wrist.setPower(wristController.calculate(0, targetObject.angle));
+                wrist.setPosition(((targetObject.angle + 180) / 180) % 1.0);
                 telemetry.addData("targetAngle: ", targetObject.angle);
-            } else {
-                wrist.setPower(0);
             }
 
             slide1.setTargetPosition(slidePos);
