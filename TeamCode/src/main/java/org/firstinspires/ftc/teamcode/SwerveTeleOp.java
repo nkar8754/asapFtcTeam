@@ -63,6 +63,7 @@ public class SwerveTeleOp extends LinearOpMode {
 
     private DcMotor slide1;
     private DcMotor slide2;
+    private CRServo extension;
     private Servo inclination;
     private Servo wrist;
     private Servo claw;
@@ -100,6 +101,7 @@ public class SwerveTeleOp extends LinearOpMode {
     private PidController pidController2;
     private PidController pidController3;
     private PidController pidController4;
+    private GeneralPid extensionController;
 
     private SwerveKinematics swerveController = new SwerveKinematics(234, 304.812);
 
@@ -117,6 +119,7 @@ public class SwerveTeleOp extends LinearOpMode {
         slide1.setMode(DcMotor.RunMode.RUN_TO_POSITION);
         slide2.setMode(DcMotor.RunMode.RUN_TO_POSITION);
 
+        extension = hardwareMap.get(CRServo.class, "extension");
         inclination = hardwareMap.get(Servo.class, "inclination");
         wrist = hardwareMap.get(Servo.class, "wrist");
         claw = hardwareMap.get(Servo.class, "claw");
@@ -175,6 +178,7 @@ public class SwerveTeleOp extends LinearOpMode {
         pidController2 = new PidController(kp, ki, kd);
         pidController3 = new PidController(kp, ki, kd);
         pidController4 = new PidController(kp, ki, kd);
+        extensionController = new GeneralPid(1, 0, 1);
 
         List<LynxModule> allHubs = hardwareMap.getAll(LynxModule.class);
 
@@ -227,14 +231,15 @@ public class SwerveTeleOp extends LinearOpMode {
                 clawAngle -= 0.05;
             }
 
-            //inclination.setPosition(inclinationAngle);
-            //claw.setPosition(clawAngle);
+            inclination.setPosition(inclinationAngle);
+            claw.setPosition(clawAngle);
 
             int smallestIndex = -1;
             double shortestDistance = 999.0;
-            for (int i = 0; i < clientStoneList.size(); i++) {
-                AnalyzedStone object = clientStoneList.get(i);
-                double distance = Math.sqrt(Math.pow(object.rect.center.x - 1280.0  / 2.0, 2.0) + Math.pow(object.rect.center.y - 720.0  / 2.0, 2.0));
+            ArrayList<AnalyzedStone> objectList = (ArrayList)clientStoneList.clone();
+            for (int i = 0; i < objectList.size(); i++) {
+                AnalyzedStone object = objectList.get(i);
+                double distance = Math.sqrt(Math.pow(object.rect.center.x - 317.0  / 2.0, 2.0) + Math.pow(object.rect.center.y - 237.0  / 2.0, 2.0));
 
                 if (distance < shortestDistance) {
                     shortestDistance = distance;
@@ -242,11 +247,19 @@ public class SwerveTeleOp extends LinearOpMode {
                 }
             }
 
-            if (smallestIndex != -1) {
-                AnalyzedStone targetObject = clientStoneList.get(smallestIndex);
+            if (smallestIndex != -1 && !objectList.isEmpty()) {
+                AnalyzedStone targetObject = objectList.get(smallestIndex);
                 wrist.setPosition(((targetObject.angle + 180) / 180) % 1.0);
-                telemetry.addData("targetAngle: ", targetObject.angle);
+
+                double linkagePower = extensionController.calculate(0, (targetObject.rect.center.x / 317) - 0.5);
+                extension.setPower(linkagePower);
+
+                telemetry.addData("Target: ", targetObject.rect.center.x);
+            } else {
+                extension.setPower(0);
             }
+
+            telemetry.addData("Extension power: ", extension.getPower());
 
             slide1.setTargetPosition(slidePos);
             slide2.setTargetPosition(slidePos);

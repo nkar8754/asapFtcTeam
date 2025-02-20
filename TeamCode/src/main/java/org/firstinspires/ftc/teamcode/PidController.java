@@ -41,7 +41,7 @@ public class PidController{
           return difference;
      }
 
-     double calculate(double targetState, double currentState)
+     public double calculate(double targetState, double currentState)
      {
           double error = targetState - currentState;
           error = angleWrap(error);
