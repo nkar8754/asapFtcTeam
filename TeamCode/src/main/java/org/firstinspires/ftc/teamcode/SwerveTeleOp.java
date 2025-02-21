@@ -70,7 +70,8 @@ public class SwerveTeleOp extends LinearOpMode {
 
     private int slidePos = 0;
     private double clawAngle = -0.37;
-    private double inclinationAngle = 0;
+    private double inclinationAngle = 1;
+    private double targetExtension = 0.0;
     private double wristAngle = 0.96;
 
     private DcMotor frontLeftMotor;
@@ -84,7 +85,7 @@ public class SwerveTeleOp extends LinearOpMode {
     private CRServo backRightServo;
 
     public static double kp = 2;
-    public static double ki = 0.5;
+    public static double ki = 0.9;
     public static double kd = 0.0;
 
     public static double offsetFR = -50;
@@ -96,12 +97,14 @@ public class SwerveTeleOp extends LinearOpMode {
     AnalogInput backRightEncoder;
     AnalogInput frontLeftEncoder;
     AnalogInput frontRightEncoder;
+    AnalogInput extensionEncoder;
 
     private PidController pidController1;
     private PidController pidController2;
     private PidController pidController3;
     private PidController pidController4;
     private GeneralPid extensionController;
+    private GeneralPid lateralController;
 
     private SwerveKinematics swerveController = new SwerveKinematics(234, 304.812);
 
@@ -138,6 +141,7 @@ public class SwerveTeleOp extends LinearOpMode {
         backRightEncoder = hardwareMap.get(AnalogInput.class, "backRightEncoder");
         frontLeftEncoder = hardwareMap.get(AnalogInput.class, "frontLeftEncoder");
         frontRightEncoder = hardwareMap.get(AnalogInput.class, "frontRightEncoder");
+        extensionEncoder = hardwareMap.get(AnalogInput.class, "extenderEncoder");
 
         telemetry = new MultipleTelemetry(FtcDashboard.getInstance().getTelemetry(),telemetry);
         telemetry.addData("Status", "Initialized");
@@ -178,7 +182,8 @@ public class SwerveTeleOp extends LinearOpMode {
         pidController2 = new PidController(kp, ki, kd);
         pidController3 = new PidController(kp, ki, kd);
         pidController4 = new PidController(kp, ki, kd);
-        extensionController = new GeneralPid(1, 0, 1);
+        extensionController = new GeneralPid(0.7, 0, 1);
+        lateralController = new GeneralPid(0.7, 0, 1);
 
         List<LynxModule> allHubs = hardwareMap.getAll(LynxModule.class);
 
@@ -204,9 +209,6 @@ public class SwerveTeleOp extends LinearOpMode {
             pidController4.Ki = ki;
             pidController4.Kd = kd;
 
-            ArrayList<Double> output = swerveController.getVelocities(-gamepad1.left_stick_y / 1.5, gamepad1.left_stick_x / 1.5, -gamepad1.right_stick_x / 360);
-            drive(output);
-
             if (gamepad2.dpad_up) {
                 slidePos += 7;
             } else if (gamepad2.dpad_down && slidePos > 0) {
@@ -215,7 +217,7 @@ public class SwerveTeleOp extends LinearOpMode {
 
             if (gamepad2.a && inclinationAngle <= 1.0) {
                 inclinationAngle += 0.05;
-            } else if (gamepad2.y && inclinationAngle >= 0.00) {
+            } else if (gamepad2.y && inclinationAngle >= -1.0) {
                 inclinationAngle -= 0.05;
             }
 
@@ -234,32 +236,47 @@ public class SwerveTeleOp extends LinearOpMode {
             inclination.setPosition(inclinationAngle);
             claw.setPosition(clawAngle);
 
-            int smallestIndex = -1;
-            double shortestDistance = 999.0;
-            ArrayList<AnalyzedStone> objectList = (ArrayList)clientStoneList.clone();
-            for (int i = 0; i < objectList.size(); i++) {
-                AnalyzedStone object = objectList.get(i);
-                double distance = Math.sqrt(Math.pow(object.rect.center.x - 317.0  / 2.0, 2.0) + Math.pow(object.rect.center.y - 237.0  / 2.0, 2.0));
+            if (gamepad2.right_trigger > 0) {
+                int smallestIndex = -1;
+                double shortestDistance = 999.0;
+                ArrayList<AnalyzedStone> objectList = (ArrayList)clientStoneList.clone();
 
-                if (distance < shortestDistance) {
-                    shortestDistance = distance;
-                    smallestIndex = i;
+                for (int i = 0; i < objectList.size(); i++) {
+                    AnalyzedStone object = objectList.get(i);
+                    double distance = Math.sqrt(Math.pow(object.rect.center.x - 317.0 / 2.0, 2.0) + Math.pow(object.rect.center.y - 237.0 / 2.0, 2.0));
+
+                    if (distance < shortestDistance) {
+                        shortestDistance = distance;
+                        smallestIndex = i;
+                    }
                 }
-            }
 
-            if (smallestIndex != -1 && !objectList.isEmpty()) {
-                AnalyzedStone targetObject = objectList.get(smallestIndex);
-                wrist.setPosition(((targetObject.angle + 180) / 180) % 1.0);
+                if (smallestIndex != -1 && !objectList.isEmpty()) {
+                    AnalyzedStone targetObject = objectList.get(smallestIndex);
+                    wrist.setPosition(((targetObject.angle + 180) / 180) % 1.0);
 
-                double linkagePower = extensionController.calculate(0, (targetObject.rect.center.x / 317) - 0.5);
+                    double linkagePower = extensionController.calculate(0, (targetObject.rect.center.x / 317.0) - 0.5);
+                    extension.setPower(linkagePower);
+
+                    double drivePower = -lateralController.calculate(0, (targetObject.rect.center.y / 237.0) - 0.5);
+                    ArrayList<Double> output = swerveController.getVelocities(0, drivePower, 0);
+                    drive(output, 1);
+
+                    telemetry.addData("Target: ", targetObject.rect.center.x);
+                } else {
+                    extension.setPower(0);
+                    ArrayList<Double> output = swerveController.getVelocities(0, 0, 0);
+                    drive(output, 0);
+                }
+            } else {
+                double linkagePower = extensionController.calculate(targetExtension, extensionEncoder.getVoltage() / 3.3);
                 extension.setPower(linkagePower);
 
-                telemetry.addData("Target: ", targetObject.rect.center.x);
-            } else {
-                extension.setPower(0);
+                ArrayList<Double> output = swerveController.getVelocities(-gamepad1.left_stick_y / 1.5, gamepad1.left_stick_x / 1.5, -gamepad1.right_stick_x / 360);
+                drive(output, 1);
             }
 
-            telemetry.addData("Extension power: ", extension.getPower());
+            telemetry.addData("Extension: ", extensionEncoder.getVoltage());
 
             slide1.setTargetPosition(slidePos);
             slide2.setTargetPosition(slidePos);
@@ -271,7 +288,7 @@ public class SwerveTeleOp extends LinearOpMode {
         }
     }
 
-    public void drive(ArrayList<Double> output) {
+    public void drive(ArrayList<Double> output, double speedMult) {
         double pid_output1 = -pidController1.calculate((((output.get(2) / Math.PI) + 1) / 2 + offsetBL / 360) % 1, (backLeftEncoder.getVoltage() / 3.3));
         backLeftServo.setPower(pid_output1 * 2);
 
@@ -284,11 +301,11 @@ public class SwerveTeleOp extends LinearOpMode {
         double pid_output4 = -pidController4.calculate((((output.get(6) / Math.PI) + 1) / 2 + offsetFR / 360) % 1, (frontRightEncoder.getVoltage() / 3.3));
         frontRightServo.setPower(pid_output4 * 2);
 
-        if (Math.abs(pid_output1) < 0.3 && Math.abs(pid_output2) < 0.3 && Math.abs(pid_output3) < 0.3 && Math.abs(pid_output4) < 0.3) {
-            frontLeftMotor.setPower(output.get(5));
-            backLeftMotor.setPower(output.get(3));
-            frontRightMotor.setPower(output.get(7));
-            backRightMotor.setPower(output.get(1));
+        if (Math.abs(pid_output1) < 0.1 && Math.abs(pid_output2) < 0.1 && Math.abs(pid_output3) < 0.1 && Math.abs(pid_output4) < 0.1) {
+            frontLeftMotor.setPower(output.get(5) * speedMult);
+            backLeftMotor.setPower(output.get(3) * speedMult);
+            frontRightMotor.setPower(output.get(7) * speedMult);
+            backRightMotor.setPower(output.get(1) * speedMult);
         } else {
             frontLeftMotor.setPower(0);
             backLeftMotor.setPower(0);
