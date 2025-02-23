@@ -69,10 +69,12 @@ public class SwerveTeleOp extends LinearOpMode {
 
     private int slidePos = 0;
     private double clawAngle = -0.37;
-    private double inclinationAngle = 1;
-    private double targetExtension = 0.3;
+    private double inclinationAngle = 0.28;
+    private double previousInclination = 0.28;
+    private int inclinationWrap = 1;
+    private double targetExtension = 0.32;
 
-    private double wristAngle = 0.96;
+    private double wristAngle = 0.83;
 
     private DcMotor frontLeftMotor;
     private DcMotor backLeftMotor;
@@ -87,8 +89,8 @@ public class SwerveTeleOp extends LinearOpMode {
     public static double kp = 3;
     public static double ki = 0.8;
     public static double kd = 0.0;
-    public static double lkp = 0.8;
-    public static double lki = 0.1;
+    public static double lkp = 2.0;
+    public static double lki = 0.0;
     public static double lkd = 0.0;
 
     public static double offsetFR = 167;
@@ -188,8 +190,8 @@ public class SwerveTeleOp extends LinearOpMode {
         pidController2 = new PidController(kp, ki, kd);
         pidController3 = new PidController(kp, ki, kd);
         pidController4 = new PidController(kp, ki, kd);
-        inclinationController = new PidController(2, 0.4, 0);
-        extensionController = new GeneralPid(lkp, lki, lkd);
+        inclinationController = new PidController(lkp, lki, lkd);
+        extensionController = new GeneralPid(2, 0.0, 0.0);
         //lateralController = new GeneralPid(0.5, 0, 1);
 
         List<LynxModule> allHubs = hardwareMap.getAll(LynxModule.class);
@@ -215,9 +217,9 @@ public class SwerveTeleOp extends LinearOpMode {
             pidController4.Kp = kp;
             pidController4.Ki = ki;
             pidController4.Kd = kd;
-            extensionController.Kp = lkp;
-            extensionController.Ki = lki;
-            extensionController.Kd = lkd;
+            inclinationController.Kp = lkp;
+            inclinationController.Ki = lki;
+            inclinationController.Kd = lkd;
 
             if (gamepad2.dpad_up) {
                 slidePos += 7;
@@ -225,11 +227,23 @@ public class SwerveTeleOp extends LinearOpMode {
                 slidePos -= 7;
             }
 
-            if (gamepad2.y && inclinationAngle <= 0.7312 || (inclinationAngle >= 0.7542 && inclinationAngle <= 1.0)) {
-                inclinationAngle = (inclinationAngle + 0.05) % 1.0;
-            } else if (gamepad2.a && inclinationAngle >= 0 || inclinationAngle >= 0.7542) {
-                inclinationAngle = (inclinationAngle - 0.05) % 1.0;
+            if (gamepad2.y && (inclinationWrap * bool2int(inclinationAngle >= 0.346) == 0)) {
+                inclinationAngle = mod((inclinationAngle + 0.01), 1.0);
+            } else if (gamepad2.a) {
+                if (inclinationWrap < 1) {
+                    if (inclinationAngle >= 0.02) mod(inclinationAngle = (inclinationAngle - 0.01), 1.0);
+                } else {
+                    inclinationAngle = mod((inclinationAngle - 0.01), 1.0);
+                }
             }
+
+            if (previousInclination - inclinationAngle < -0.5) {
+                inclinationWrap--;
+            } else if (previousInclination - inclinationAngle > 0.5) {
+                inclinationWrap++;
+            }
+
+            previousInclination = inclinationAngle;
 
             if (gamepad2.x && wristAngle <= 1.0) {
                 wristAngle += 0.01;
@@ -268,6 +282,7 @@ public class SwerveTeleOp extends LinearOpMode {
                 if (smallestIndex != -1 && !objectList.isEmpty()) {
                     AnalyzedStone targetObject = objectList.get(smallestIndex);
                     wrist.setPosition(((targetObject.angle + 180) / 180) % 1.0);
+                    inclination.setPower(0);
 
                     linkagePower = extensionController.calculate(0, (targetObject.rect.center.x / 317.0) - 0.5);
                     extension.setPower(linkagePower);
@@ -297,6 +312,7 @@ public class SwerveTeleOp extends LinearOpMode {
                     drive(output, 0);
                 } else {
                     extension.setPower(0);
+                    inclination.setPower(0);
                 }
             } else {
                 //double linkagePower = extensionController.calculate(targetExtension, extensionEncoder.getVoltage() / 3.3);
@@ -305,14 +321,12 @@ public class SwerveTeleOp extends LinearOpMode {
                 ArrayList<Double> output = swerveController.getVelocities(-gamepad1.left_stick_y / 1.5, gamepad1.left_stick_x / 1.5, -gamepad1.right_stick_x / 360);
                 drive(output, 1);
 
-                linkagePower = extensionController.calculate(targetExtension, extensionEncoder.getVoltage() / 3.3);
+                linkagePower = -extensionController.calculate(targetExtension, extensionEncoder.getVoltage() / 3.3);
                 extension.setPower(linkagePower);
-                double inclinationPower = inclinationController.calculate(inclinationAngle, inclinationEncoder.getVoltage() / 3.3);
+                double inclinationPower = -inclinationController.calculate(inclinationAngle, inclinationEncoder.getVoltage() / 3.3);
                 inclination.setPower(inclinationPower);
                 wrist.setPosition(wristAngle);
                 claw.setPosition(clawAngle);
-
-                extensionController.calculate(0, 0);
             }
 
             //slide1.setTargetPosition(slidePos);
@@ -320,6 +334,7 @@ public class SwerveTeleOp extends LinearOpMode {
 
             telemetry.addData("slidePos: ", slidePos);
             telemetry.addData("claw: ", clawAngle);
+            telemetry.addData("wrist: ", wristAngle);
             telemetry.addData("extension: ", extensionEncoder.getVoltage() / 3.3);
             telemetry.addData("targetExtension: ", targetExtension);
             telemetry.addData("extensionPower: ", linkagePower);
@@ -333,7 +348,17 @@ public class SwerveTeleOp extends LinearOpMode {
         }
     }
 
-    public void drive(ArrayList<Double> output, double speedMult) {
+    private double mod(double a, double b) {
+        double ret = a % b;
+        if (ret < 0) ret += b;
+        return ret;
+    }
+
+    private int bool2int(boolean b) {
+        return b ? 1 : 0;
+    }
+
+    private void drive(ArrayList<Double> output, double speedMult) {
         double pid_output1 = -pidController1.calculate((((output.get(2) / Math.PI) + 1) / 2 + offsetBL / 360) % 1, (backLeftEncoder.getVoltage() / 3.3));
         backLeftServo.setPower(pid_output1 * 2);
 
