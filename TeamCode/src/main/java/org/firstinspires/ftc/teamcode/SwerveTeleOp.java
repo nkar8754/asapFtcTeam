@@ -72,7 +72,7 @@ public class SwerveTeleOp extends LinearOpMode {
     private double inclinationAngle = 0.28;
     private double previousInclination = 0.28;
     private int inclinationWrap = 1;
-    private double targetExtension = 0.32;
+    private double targetExtension = 0.25;
 
     private double wristAngle = 0.83;
 
@@ -191,7 +191,7 @@ public class SwerveTeleOp extends LinearOpMode {
         pidController3 = new PidController(kp, ki, kd);
         pidController4 = new PidController(kp, ki, kd);
         inclinationController = new PidController(lkp, lki, lkd);
-        extensionController = new GeneralPid(2, 0.0, 0.0);
+        extensionController = new GeneralPid(2, 0, 0);
         //lateralController = new GeneralPid(0.5, 0, 1);
 
         List<LynxModule> allHubs = hardwareMap.getAll(LynxModule.class);
@@ -257,9 +257,9 @@ public class SwerveTeleOp extends LinearOpMode {
                 clawAngle -= 0.05;
             }
 
-            if (gamepad2.dpad_left && targetExtension <= 0.6331) {
+            if (gamepad2.dpad_left && targetExtension <= 0.367) {
                 targetExtension += 0.01;
-            } else if (gamepad2.dpad_right && targetExtension >= 0.41) {
+            } else if (gamepad2.dpad_right && targetExtension >= 0.18) {
                 targetExtension -= 0.01;
             }
 
@@ -285,7 +285,7 @@ public class SwerveTeleOp extends LinearOpMode {
                     inclination.setPower(0);
 
                     linkagePower = extensionController.calculate(0, (targetObject.rect.center.x / 317.0) - 0.5);
-                    extension.setPower(linkagePower);
+                    extension.setPower(linkagePower * 0.6);
 
                    /** double lateralPower = lateralController.calculate(0, (targetObject.rect.center.y / 237.0) - 0.5);
 
@@ -315,14 +315,11 @@ public class SwerveTeleOp extends LinearOpMode {
                     inclination.setPower(0);
                 }
             } else {
-                //double linkagePower = extensionController.calculate(targetExtension, extensionEncoder.getVoltage() / 3.3);
-                //extension.setPower(linkagePower);
-
                 ArrayList<Double> output = swerveController.getVelocities(-gamepad1.left_stick_y / 1.5, gamepad1.left_stick_x / 1.5, -gamepad1.right_stick_x / 360);
                 drive(output, 1);
 
                 linkagePower = -extensionController.calculate(targetExtension, extensionEncoder.getVoltage() / 3.3);
-                extension.setPower(linkagePower);
+                extension.setPower(linkagePower * 2);
                 double inclinationPower = -inclinationController.calculate(inclinationAngle, inclinationEncoder.getVoltage() / 3.3);
                 inclination.setPower(inclinationPower);
                 wrist.setPosition(wristAngle);
