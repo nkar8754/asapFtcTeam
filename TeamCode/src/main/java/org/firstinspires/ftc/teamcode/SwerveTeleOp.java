@@ -117,17 +117,13 @@ public class SwerveTeleOp extends LinearOpMode {
 
     @Override
     public void runOpMode() {
-        /**slide1 = hardwareMap.get(DcMotorEx.class, "slide1");
+        slide1 = hardwareMap.get(DcMotorEx.class, "slide1");
         slide2 = hardwareMap.get(DcMotorEx.class, "slide2");
         slide1.setTargetPosition(slidePos);
-        slide2.setTargetPosition(slidePos);
         slide1.setPower(1);
-        slide2.setPower(1);
         slide2.setDirection(DcMotorSimple.Direction.REVERSE);
         slide1.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        slide2.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         slide1.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        slide2.setMode(DcMotor.RunMode.RUN_TO_POSITION);**/
 
         extension = hardwareMap.get(CRServo.class, "extension");
         inclination = hardwareMap.get(CRServo.class, "inclination");
@@ -263,6 +259,12 @@ public class SwerveTeleOp extends LinearOpMode {
                 targetExtension -= 0.01;
             }
 
+            if (gamepad2.left_trigger > 0.3 && gamepad2.a) {
+                slidePos = 875;
+            } else if (gamepad2.left_trigger > 0.3 && gamepad2.b) {
+                slidePos = 945;
+            }
+
             double linkagePower = 0;
             if (gamepad2.right_trigger > 0.3) {
                 int smallestIndex = -1;
@@ -326,8 +328,8 @@ public class SwerveTeleOp extends LinearOpMode {
                 claw.setPosition(clawAngle);
             }
 
-            //slide1.setTargetPosition(slidePos);
-            //slide2.setTargetPosition(slidePos);
+            slide1.setTargetPosition(slidePos);
+            slide2.setPower(slide1.getPower());
 
             telemetry.addData("slidePos: ", slidePos);
             telemetry.addData("claw: ", clawAngle);
@@ -341,6 +343,7 @@ public class SwerveTeleOp extends LinearOpMode {
             telemetry.addData("br: ", backRightEncoder.getVoltage() / 3.3);
             telemetry.addData("fl: ", frontLeftEncoder.getVoltage() / 3.3);
             telemetry.addData("bl: ", backLeftEncoder.getVoltage() / 3.3);
+            telemetry.addData("slide position: ", slide1.getCurrentPosition());
             telemetry.update();
         }
     }
