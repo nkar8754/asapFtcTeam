@@ -16,13 +16,13 @@ public class Odometry {
     private SparkFunOTOS myOtos;        // Optical tracking odometry sensor
     SparkFunOTOS.Pose2D pos = myOtos.getPosition();
     Translation2d m_frontLeftLocation =
-            new Translation2d(0.381, 0.381);
+            new Translation2d(152.406, 117);
     Translation2d m_frontRightLocation =
-            new Translation2d(0.381, -0.381);
+            new Translation2d(152.406, -117);
     Translation2d m_backLeftLocation =
-            new Translation2d(-0.381, 0.381);
+            new Translation2d(-152.406, 117);
     Translation2d m_backRightLocation =
-            new Translation2d(-0.381, -0.381);
+            new Translation2d(-152.406, -117);
      Translation2d m_centerLocation =
             new Translation2d(0.0, 0.0);
 
