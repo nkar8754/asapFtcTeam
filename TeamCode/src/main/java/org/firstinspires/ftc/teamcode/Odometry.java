@@ -14,7 +14,7 @@ public class Odometry {
     // Locations for the swerve drive modules relative to the
 // robot center.
 
-    private SparkFunOTOS myOtos;        // Optical tracking odometry sensor
+    public static SparkFunOTOS myOtos;        // Optical tracking odometry sensor
     SparkFunOTOS.Pose2D pos = myOtos.getPosition();
     Translation2d m_frontLeftLocation =
             new Translation2d(152.406, 117);

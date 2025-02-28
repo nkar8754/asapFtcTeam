@@ -1,6 +1,8 @@
 package org.firstinspires.ftc.teamcode;
 import static org.firstinspires.ftc.teamcode.MathFunctions.AngleWrap;
 import static org.firstinspires.ftc.teamcode.MathFunctions.lineCircleIntersection;
+import com.qualcomm.hardware.sparkfun.SparkFunOTOS;
+import static org.firstinspires.ftc.teamcode.Odometry.myOtos;
 
 import com.qualcomm.robotcore.util.Range;
 
@@ -13,7 +15,7 @@ public class RobotMovement {
 
     public static void followCurve(ArrayList<CurvePoint> allPoints, double followAngle){
 
-        CurvePoint followMe = getFollowPointPath(allPoints, new Point(worldXPosition, worldYPosition), allPoints.get(0).followDistance);
+        CurvePoint followMe = getFollowPointPath(allPoints, new Point(worldXPosition.x, worldYPosition.y), allPoints.get(0).followDistance);
 
         goToPosition(followMe.x, followMe.y, followMe.moveSpeed, followAngle, followMe.turnSpeed);
     }
@@ -35,7 +37,7 @@ public class RobotMovement {
             double closestAngle = 1000;
 
             for(Point thisIntersection : intersections){
-                double angle = Math.atan2(thisIntersection.y - worldYPosition, thisIntersection.x - worldXPosition);
+                double angle = Math.atan2(thisIntersection.y - worldYPosition.y, thisIntersection.x - worldXPosition.x);
                 double deltaAngle = Math.abs(MathFunctions.AngleWrap(angle - worldAngle_rad));
 
                 if(deltaAngle < closestAngle){
@@ -50,15 +52,15 @@ public class RobotMovement {
 
 
 
-    static double worldXPosition = 0;
-    static double worldYPosition = 0;
+    static SparkFunOTOS.Pose2D worldXPosition = myOtos.getPosition();
+    static SparkFunOTOS.Pose2D worldYPosition = myOtos.getPosition();
     static double worldAngle_rad = (-180);
 
     public static void goToPosition(double x, double y, double movementSpeed, double preferredAngle, double turnSpeed){
 
-        double distanceToTarget = Math.hypot(x - worldXPosition, y - worldYPosition);
+        double distanceToTarget = Math.hypot(x - worldXPosition.x, y - worldYPosition.y);
 
-        double absoluteAngleToTarget = Math.atan2(y - worldYPosition, x - worldXPosition);
+        double absoluteAngleToTarget = Math.atan2(y - worldYPosition.y, x - worldXPosition.x);
 
         double relativeAngleToPoint = AngleWrap(absoluteAngleToTarget - (worldAngle_rad - Math.toRadians(90)));
 
