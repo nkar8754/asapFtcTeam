@@ -72,11 +72,12 @@ public class SwerveTeleOp extends LinearOpMode {
     private double inclinationAngle = 2;
     private double previousInclination = 2;
     private int inclinationWrap = 1;
-    private double targetExtension = -0.33;
-    private double previousExtension = -0.33;
+    private double targetExtension = 0.04;
+    private double previousExtension = 0.04;
     private int extensionWrap = 0;
-
     private double wristAngle = 0.83;
+    private double readExtension = 0;
+    boolean grabbing = false;
 
     private DcMotor frontLeftMotor;
     private DcMotor backLeftMotor;
@@ -123,8 +124,8 @@ public class SwerveTeleOp extends LinearOpMode {
         slide2 = hardwareMap.get(DcMotorEx.class, "slide2");
         slide1.setTargetPosition(slidePos);
         slide2.setTargetPosition(slidePos);
-        slide1.setPower(0);
-        slide2.setPower(0);
+        slide1.setPower(1);
+        slide2.setPower(1);
         slide2.setDirection(DcMotorSimple.Direction.REVERSE);
         slide1.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         slide2.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
@@ -239,10 +240,20 @@ public class SwerveTeleOp extends LinearOpMode {
 
             double actualInclination = inclinationWrap + currentInclination;
 
-            if (gamepad2.y && inclinationAngle <= 2.27) {
+            if (gamepad2.b && gamepad2.left_trigger > 0) {
+                targetColor = 0;
+            } else if (gamepad2.y && gamepad2.left_trigger > 0) {
+                targetColor = 1;
+            } else if (gamepad2.x && gamepad2.left_trigger > 0) {
+                targetColor = 2;
+            } else if (gamepad2.y && inclinationAngle <= 2.27) {
                 inclinationAngle += 0.03;
             } else if (gamepad2.a && inclinationAngle >= 1.06) {
                 inclinationAngle -= 0.03;
+            } else if (gamepad2.x && wristAngle <= 1.0) {
+                wristAngle += 0.01;
+            } else if (gamepad2.b && wristAngle >= -1.0) {
+                wristAngle -= 0.01;
             }
 
             previousInclination = currentInclination;
@@ -257,19 +268,13 @@ public class SwerveTeleOp extends LinearOpMode {
 
             double actualExtension = extensionWrap + currentExtension;
 
-            if (gamepad2.dpad_left && targetExtension <= -0.33) {
+            if (gamepad2.dpad_left && targetExtension <= 0.04) {
                 targetExtension += 0.03;
-            } else if (gamepad2.dpad_right && targetExtension >= -2.16) {
+            } else if (gamepad2.dpad_right && targetExtension >= -1.48) {
                 targetExtension -= 0.03;
             }
 
             previousExtension = currentExtension;
-
-            if (gamepad2.x && wristAngle <= 1.0) {
-                wristAngle += 0.01;
-            } else if (gamepad2.b && wristAngle >= -1.0) {
-                wristAngle -= 0.01;
-            }
 
             if (gamepad2.right_bumper && clawAngle <= 1.0) {
                 clawAngle += 0.05;
@@ -299,42 +304,41 @@ public class SwerveTeleOp extends LinearOpMode {
                     }
                 }
 
-                if (smallestIndex != -1 && !objectList.isEmpty()) {
+                if (smallestIndex != -1 && !objectList.isEmpty() && grabbing == false) {
                     AnalyzedStone targetObject = objectList.get(smallestIndex);
-                    wrist.setPosition(((targetObject.angle + 180) / 180) % 1.0);
-                    inclination.setPower(0);
+                    wristAngle = mod(((targetObject.angle + 180) / 180), 1.0);
+                    wrist.setPosition(wristAngle);
+                    inclinationAngle = 1.07;
+                    targetExtension = actualExtension;
 
                     linkagePower = -extensionController.calculate(0, (targetObject.rect.center.x / 317.0) - 0.5);
-                    extension.setPower(linkagePower * 0.6);
+                    extension.setPower(linkagePower * 0.5);
 
-                   /** double lateralPower = lateralController.calculate(0, (targetObject.rect.center.y / 237.0) - 0.5);
+                    double inclinationPower = -inclinationController.calculate(inclinationAngle, actualInclination);
+                    inclination.setPower(inclinationPower);
 
-                    double pid_output1 = -pidController1.calculate(0.9115, (backLeftEncoder.getVoltage() / 3.3));
-                    backLeftServo.setPower(pid_output1 * 2);
-
-                    double pid_output2 = -pidController2.calculate(0.0688, (backRightEncoder.getVoltage() / 3.3));
-                    backRightServo.setPower(pid_output2 * 2);
-
-                    double pid_output3 = -pidController3.calculate(0.6206, (frontLeftEncoder.getVoltage() / 3.3));
-                    frontLeftServo.setPower(pid_output3 * 2);
-
-                    double pid_output4 = -pidController4.calculate(0.7161, (frontRightEncoder.getVoltage() / 3.3));
-                    frontRightServo.setPower(pid_output4 * 2);
-
-                    if (Math.abs(pid_output1) < 0.1 && Math.abs(pid_output2) < 0.1 && Math.abs(pid_output3) < 0.1 && Math.abs(pid_output4) < 0.1) {
-                        frontLeftMotor.setPower(lateralPower);
-                        backLeftMotor.setPower(lateralPower);
-                        frontRightMotor.setPower(lateralPower);
-                        backRightMotor.setPower(lateralPower);
-                    }**/
+                    if (Math.abs((targetObject.rect.center.x / 317.0) - 0.5) < 0.3 && Math.abs(1.07 - actualInclination) < 0.1) {
+                        readExtension = actualExtension;
+                        grabbing = true;
+                    }
 
                     ArrayList<Double> output = swerveController.getVelocities(0, 0, 0);
                     drive(output, 0);
+                } else if (grabbing == true) {
+                    clawAngle = 0.93;
+                    claw.setPosition(clawAngle);
+
+                    linkagePower = -extensionController.calculate(readExtension + 0.975, actualExtension);
+                    extension.setPower(linkagePower);
+
+                    targetExtension = readExtension + 0.975;
                 } else {
                     extension.setPower(0);
                     inclination.setPower(0);
                 }
             } else {
+                grabbing = false;
+
                 ArrayList<Double> output = swerveController.getVelocities(-gamepad1.left_stick_y / 1.5, gamepad1.left_stick_x / 1.5, -gamepad1.right_stick_x / 360);
                 drive(output, 1);
 
