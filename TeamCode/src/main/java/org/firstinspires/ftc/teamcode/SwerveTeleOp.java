@@ -89,14 +89,14 @@ public class SwerveTeleOp extends LinearOpMode {
     private CRServo frontRightServo;
     private CRServo backRightServo;
 
-    public static double kp = 3;
+    public static double kp = 2;
     public static double ki = 0.8;
     public static double kd = 0.0;
     public static double lkp = 2.0;
     public static double lki = 0.0;
     public static double lkd = 0.0;
 
-    public static double offsetFR = 167;
+    public static double offsetFR = 177;
     public static double offsetBR = -60;
     public static double offsetFL = 130;
     public static double offsetBL = -118;
@@ -338,9 +338,14 @@ public class SwerveTeleOp extends LinearOpMode {
                 }
             } else {
                 grabbing = false;
+                double speedMult = 1;
+
+                if (gamepad1.left_stick_button) {
+                    speedMult = 0.6;
+                }
 
                 ArrayList<Double> output = swerveController.getVelocities(-gamepad1.left_stick_y / 1.5, gamepad1.left_stick_x / 1.5, -gamepad1.right_stick_x / 360);
-                drive(output, 1);
+                drive(output, speedMult);
 
                 linkagePower = -extensionController.calculate(targetExtension, actualExtension);
                 extension.setPower(linkagePower);
