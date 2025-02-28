@@ -50,7 +50,6 @@ public class RobotMovement {
 
 
 
-
     static double worldXPosition = 0;
     static double worldYPosition = 0;
     static double worldAngle_rad = (-180);
