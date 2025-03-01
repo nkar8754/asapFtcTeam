@@ -6,6 +6,7 @@ import static org.firstinspires.ftc.teamcode.RobotMovement.followCurve;
 import static org.firstinspires.ftc.teamcode.RobotMovement.goToPosition;
 
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
+import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.AnalogInput;
 import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
@@ -13,7 +14,7 @@ import com.qualcomm.robotcore.hardware.DcMotorEx;
 
 import java.util.ArrayList;
 @Autonomous
-public class Auto {
+public class Auto extends LinearOpMode {
 
     private DcMotor frontLeftMotor;
     private DcMotor backLeftMotor;
@@ -50,7 +51,7 @@ public class Auto {
     double relativeTurnAngle = getRelativeTurnAngle();
     double moveSpeed = getMoveSpeed();
 
-
+    @Override
     public void runOpMode() {
         frontLeftMotor = hardwareMap.get(DcMotorEx.class, "frontLeftMotor");
         backLeftMotor = hardwareMap.get(DcMotorEx.class, "backLeftMotor");
