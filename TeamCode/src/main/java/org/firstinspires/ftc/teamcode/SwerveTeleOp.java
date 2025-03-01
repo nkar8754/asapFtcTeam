@@ -371,6 +371,8 @@ public class SwerveTeleOp extends LinearOpMode {
             telemetry.addData("fl: ", frontLeftEncoder.getVoltage() / 3.3);
             telemetry.addData("bl: ", backLeftEncoder.getVoltage() / 3.3);
             telemetry.addData("slide position: ", slide1.getCurrentPosition());
+            telemetry.addData("X: ", odometry.getPosition().x);
+            telemetry.addData("Y: ", odometry.getPosition().y);
             telemetry.update();
         }
     }

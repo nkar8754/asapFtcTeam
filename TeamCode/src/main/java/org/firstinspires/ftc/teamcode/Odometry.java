@@ -1,5 +1,13 @@
 package org.firstinspires.ftc.teamcode;
 
+
+import static org.firstinspires.ftc.robotcore.external.BlocksOpModeCompanion.hardwareMap;
+
+import com.acmerobotics.dashboard.config.Config;
+import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
+import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+
+
 import android.text.PrecomputedText;
 
 import com.arcrobotics.ftclib.geometry.Pose2d;
@@ -9,13 +17,16 @@ import com.arcrobotics.ftclib.kinematics.wpilibkinematics.SwerveDriveKinematics;
 import com.arcrobotics.ftclib.kinematics.wpilibkinematics.SwerveDriveOdometry;
 import com.qualcomm.hardware.sparkfun.SparkFunOTOS;
 
-
 public class Odometry {
     // Locations for the swerve drive modules relative to the
 // robot center.
 
-    public static SparkFunOTOS myOtos;        // Optical tracking odometry sensor
-    SparkFunOTOS.Pose2D pos = myOtos.getPosition();
+    public static SparkFunOTOS myOtos;
+
+    public Odometry (SparkFunOTOS otos) {
+        this.myOtos = otos;
+    }
+
     Translation2d m_frontLeftLocation =
             new Translation2d(152.406, 117);
     Translation2d m_frontRightLocation =
@@ -40,6 +51,6 @@ public class Odometry {
 // center of the field along the short end, facing forward.
     SwerveDriveOdometry m_odometry = new SwerveDriveOdometry
             (
-                    m_kinematics, new Rotation2d(pos.h), new Pose2d(5.0, 13.5, new Rotation2d())
+                    m_kinematics, new Rotation2d(myOtos.getPosition().h), new Pose2d(5.0, 13.5, new Rotation2d())
             );
 }

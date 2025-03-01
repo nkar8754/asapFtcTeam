@@ -4,6 +4,9 @@ import static org.firstinspires.ftc.robotcore.external.BlocksOpModeCompanion.har
 import static org.firstinspires.ftc.robotcore.external.BlocksOpModeCompanion.telemetry;
 import static org.firstinspires.ftc.teamcode.RobotMovement.followCurve;
 import static org.firstinspires.ftc.teamcode.RobotMovement.goToPosition;
+
+import com.acmerobotics.dashboard.config.Config;
+import com.qualcomm.hardware.sparkfun.SparkFunOTOS;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
@@ -13,9 +16,16 @@ import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 
+import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
+
 import java.util.ArrayList;
+
+@Config
 @Autonomous
 public class Auto extends LinearOpMode {
+
+    private SparkFunOTOS odometry;
 
     private DcMotor frontLeftMotor;
     private DcMotor backLeftMotor;
@@ -32,10 +42,10 @@ public class Auto extends LinearOpMode {
     public static double ki = 1;
     public static double kd = 0.0;
 
-    public static double offsetFR = 130;
-    public static double offsetBR = 210;
-    public static double offsetFL = 110;
-    public static double offsetBL = 20;
+    public static double offsetFR = 177;
+    public static double offsetBR = -60;
+    public static double offsetFL = 130;
+    public static double offsetBL = -118;
 
     public static double svP = 0;
 
@@ -68,6 +78,17 @@ public class Auto extends LinearOpMode {
         backRightEncoder = hardwareMap.get(AnalogInput.class, "backRightEncoder");
         frontLeftEncoder = hardwareMap.get(AnalogInput.class, "frontLeftEncoder");
         frontRightEncoder = hardwareMap.get(AnalogInput.class, "frontRightEncoder");
+
+        odometry = hardwareMap.get(SparkFunOTOS.class, "sensor_otos");
+        odometry.setLinearUnit(DistanceUnit.INCH);
+        odometry.setAngularUnit(AngleUnit.DEGREES);
+        odometry.setLinearScalar(1.008);
+        odometry.setAngularScalar(0.992);
+        odometry.calibrateImu();
+        odometry.resetTracking();
+        Odometry.myOtos = this.odometry;
+        SparkFunOTOS.Pose2D currentPosition = new SparkFunOTOS.Pose2D(0, 0, 0);
+        odometry.setPosition(currentPosition);
 
         telemetry.addData("Status", "Initialized");
         telemetry.update();
