@@ -4,7 +4,8 @@ import static org.firstinspires.ftc.robotcore.external.BlocksOpModeCompanion.har
 import static org.firstinspires.ftc.robotcore.external.BlocksOpModeCompanion.telemetry;
 import static org.firstinspires.ftc.teamcode.RobotMovement.followCurve;
 import static org.firstinspires.ftc.teamcode.RobotMovement.goToPosition;
-
+import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.AnalogInput;
@@ -68,9 +69,13 @@ public class Auto extends LinearOpMode {
         frontLeftEncoder = hardwareMap.get(AnalogInput.class, "frontLeftEncoder");
         frontRightEncoder = hardwareMap.get(AnalogInput.class, "frontRightEncoder");
 
-        telemetry.addData("Status", "Running");
+        telemetry.addData("Status", "Initialized");
         telemetry.update();
 
+        waitForStart();
+
+        telemetry.addData("Status", "Running");
+        telemetry.update();
 
         pidController5.Kp = kp;
         pidController5.Ki = ki;
@@ -87,9 +92,9 @@ public class Auto extends LinearOpMode {
 
         ArrayList<CurvePoint> allPoints = new ArrayList<>();
 
-        allPoints.add(new CurvePoint(0,0, 1.0, 1.0, 50, Math.toRadians(50), 1.0));
+        allPoints.add(new CurvePoint(10,10, 1.0, 1.0, 50, Math.toRadians(50), 1.0));
         followCurve(allPoints, Math.toRadians(90));
-        goToPosition(0,0, 1.0, 90, 1.0);
+        goToPosition(10,10, 1.0, 90, 1.0);
 
         motorOutput();
 
@@ -98,20 +103,20 @@ public class Auto extends LinearOpMode {
 
         motorOutput();
 
-        allPoints.add(new CurvePoint(0,0, 1.0, 1.0, 50, Math.toRadians(50), 1.0));
-        followCurve(allPoints, Math.toRadians(90));
+        //allPoints.add(new CurvePoint(0,0, 1.0, 1.0, 50, Math.toRadians(50), 1.0));
+        //followCurve(allPoints, Math.toRadians(90));
 
-        motorOutput();
+        //motorOutput();
 
-        allPoints.add(new CurvePoint(0,0, 1.0, 1.0, 50, Math.toRadians(50), 1.0));
-        followCurve(allPoints, Math.toRadians(90));
+        //allPoints.add(new CurvePoint(0,0, 1.0, 1.0, 50, Math.toRadians(50), 1.0));
+        //followCurve(allPoints, Math.toRadians(90));
 
-        motorOutput();
+        //motorOutput();
 
-        allPoints.add(new CurvePoint(0,0, 1.0, 1.0, 50, Math.toRadians(50), 1.0));
-        followCurve(allPoints, Math.toRadians(90));
+        //allPoints.add(new CurvePoint(0,0, 1.0, 1.0, 50, Math.toRadians(50), 1.0));
+        //followCurve(allPoints, Math.toRadians(90));
 
-        motorOutput();
+        //motorOutput();
 
 }
 
