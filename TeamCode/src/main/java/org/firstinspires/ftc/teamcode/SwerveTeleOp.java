@@ -225,9 +225,9 @@ public class SwerveTeleOp extends LinearOpMode {
             extensionController.Kd = lkd;
 
             if (gamepad2.dpad_up) {
-                slidePos += 7;
-            } else if (gamepad2.dpad_down && slidePos > 0) {
-                slidePos -= 7;
+                slidePos += 10;
+            } else if (gamepad2.dpad_down && slidePos >= -40) {
+                slidePos -= 10;
             }
 
             double currentInclination = inclinationEncoder.getVoltage() / 3.3;
@@ -251,9 +251,9 @@ public class SwerveTeleOp extends LinearOpMode {
             } else if (gamepad2.a && inclinationAngle >= 1.06) {
                 inclinationAngle -= 0.03;
             } else if (gamepad2.x && wristAngle <= 1.0) {
-                wristAngle += 0.01;
+                wristAngle += 0.05;
             } else if (gamepad2.b && wristAngle >= -1.0) {
-                wristAngle -= 0.01;
+                wristAngle -= 0.05;
             }
 
             previousInclination = currentInclination;

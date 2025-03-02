@@ -22,11 +22,6 @@ public class Odometry {
 // robot center.
 
     public static SparkFunOTOS myOtos;
-
-    public Odometry (SparkFunOTOS otos) {
-        this.myOtos = otos;
-    }
-
     Translation2d m_frontLeftLocation =
             new Translation2d(152.406, 117);
     Translation2d m_frontRightLocation =

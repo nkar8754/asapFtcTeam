@@ -11,18 +11,10 @@ import org.opencv.core.Point;
 import java.util.ArrayList;
 
 public class RobotMovement {
-
-
     public static void followCurve(ArrayList<CurvePoint> allPoints, double followAngle){
-
         CurvePoint followMe = getFollowPointPath(allPoints, new Point(worldXPosition.x, worldYPosition.y), allPoints.get(0).followDistance);
-
         goToPosition(followMe.x, followMe.y, followMe.moveSpeed, followAngle, followMe.turnSpeed);
     }
-
-
-
-
 
     public static CurvePoint getFollowPointPath(ArrayList<CurvePoint> pathPoints, Point robotLocation, double followRadius){
         CurvePoint followMe = new CurvePoint(pathPoints.get(0));
@@ -48,9 +40,6 @@ public class RobotMovement {
         }
         return followMe;
     }
-
-
-
 
     static SparkFunOTOS.Pose2D worldXPosition = myOtos.getPosition();
     static SparkFunOTOS.Pose2D worldYPosition = myOtos.getPosition();

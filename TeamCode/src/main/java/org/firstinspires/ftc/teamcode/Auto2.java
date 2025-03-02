@@ -1,14 +1,6 @@
 package org.firstinspires.ftc.teamcode;
 
-import static org.firstinspires.ftc.robotcore.external.BlocksOpModeCompanion.hardwareMap;
-import static org.firstinspires.ftc.robotcore.external.BlocksOpModeCompanion.telemetry;
-import static org.firstinspires.ftc.teamcode.RobotMovement.followCurve;
-import static org.firstinspires.ftc.teamcode.RobotMovement.goToPosition;
-
-import com.acmerobotics.dashboard.config.Config;
 import com.qualcomm.hardware.sparkfun.SparkFunOTOS;
-import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
-import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.AnalogInput;
@@ -24,10 +16,8 @@ import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 
 import java.util.ArrayList;
 
-@Config
 @Autonomous
-public class Auto extends LinearOpMode {
-
+public class Auto2 extends LinearOpMode {
     private SparkFunOTOS odometry;
 
     private DcMotor frontLeftMotor;
@@ -72,18 +62,6 @@ public class Auto extends LinearOpMode {
 
     @Override
     public void runOpMode() {
-        slide1 = hardwareMap.get(DcMotorEx.class, "slide1");
-        slide2 = hardwareMap.get(DcMotorEx.class, "slide2");
-        slide1.setTargetPosition(0);
-        slide2.setTargetPosition(0);
-        slide1.setPower(1);
-        slide2.setPower(1);
-        slide2.setDirection(DcMotorSimple.Direction.REVERSE);
-        slide1.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        slide2.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        slide1.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        slide2.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-
         frontLeftMotor = hardwareMap.get(DcMotorEx.class, "frontLeftMotor");
         backLeftMotor = hardwareMap.get(DcMotorEx.class, "backLeftMotor");
         frontRightMotor = hardwareMap.get(DcMotorEx.class, "frontRightMotor");
@@ -144,16 +122,7 @@ public class Auto extends LinearOpMode {
         //wrist: 1.01
         //slide: 980
         //inc: 1.616
-
-        double inclinationAngle = 1.59;
-        double previousInclination = 2;
-        int inclinationWrap = 1;
         ElapsedTime timer = new ElapsedTime();
-
-        claw.setPosition(-0.37);
-        wrist.setPosition(1.01);
-        slide1.setTargetPosition(980);
-        slide2.setTargetPosition(980);
 
         while (timer.milliseconds() <= 1500) {
             ArrayList<Double> output = swerveController.getVelocities(0.5,0, 0);
@@ -162,37 +131,7 @@ public class Auto extends LinearOpMode {
 
         ArrayList<Double> output = swerveController.getVelocities(0,0, 0);
         drive(output, 1);
-
-        while (true) {
-            double currentInclination = inclinationEncoder.getVoltage() / 3.3;
-
-            if (previousInclination - currentInclination < -0.5) {
-                inclinationWrap--;
-            } else if (previousInclination - currentInclination > 0.5) {
-                inclinationWrap++;
-            }
-
-            double actualInclination = inclinationWrap + currentInclination;
-
-            double inclinationPower = inclinationController.calculate(inclinationAngle, actualInclination);
-            inclination.setPower(-inclinationPower);
-
-            previousInclination = currentInclination;
-
-            if (Math.abs(actualInclination - inclinationAngle) < 0.1) {
-                claw.setPosition(1.03);
-            } else {
-                claw.setPosition(-0.37);
-            }
-
-            wrist.setPosition(1.01);
-            slide1.setTargetPosition(980);
-            slide2.setTargetPosition(980);
-
-            telemetry.addData("Actual: ", actualInclination);
-            telemetry.update();
-        }
-}
+    }
 
     private void drive(ArrayList<Double> output, double speedMult) {
         double pid_output1 = -pidController1.calculate((((output.get(2) / Math.PI) + 1) / 2 + offsetBL / 360) % 1, (backLeftEncoder.getVoltage() / 3.3));
