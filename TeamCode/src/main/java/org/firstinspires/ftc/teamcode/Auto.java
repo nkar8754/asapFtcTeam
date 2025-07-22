@@ -50,10 +50,10 @@ public class Auto extends LinearOpMode {
     public static double ki = 1;
     public static double kd = 0.0;
 
-    public static double offsetFR = 177;
-    public static double offsetBR = -60;
-    public static double offsetFL = 130;
-    public static double offsetBL = -118;
+    public static double offsetFR = 0;
+    public static double offsetBR = 0;
+    public static double offsetFL = 0;
+    public static double offsetBL = 0;
 
     public static double svP = 0;
 
