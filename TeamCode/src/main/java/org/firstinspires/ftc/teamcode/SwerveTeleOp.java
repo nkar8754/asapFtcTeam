@@ -89,15 +89,15 @@ public class SwerveTeleOp extends LinearOpMode {
     private CRServo frontRightServo;
     private CRServo backRightServo;
 
-    public static double kp = 3;
-    public static double ki = 0.8;
-    public static double kd = 0.0;
+    public static double kp = 2;
+    public static double ki = 0.01;
+    public static double kd = 1;
     public static double lkp = 2.0;
     public static double lki = 0.0;
     public static double lkd = 0.0;
 
     public static double offsetFR = -223;
-    public static double offsetBR = 35;
+    public static double offsetBR = 155;
     public static double offsetFL = 100;
     public static double offsetBL = -40;
 
@@ -389,16 +389,6 @@ public class SwerveTeleOp extends LinearOpMode {
         }
     }
 
-    private double mod(double a, double b) {
-        double ret = a % b;
-        if (ret < 0) ret += b;
-        return ret;
-    }
-
-    private int bool2int(boolean b) {
-        return b ? 1 : 0;
-    }
-
     private void drive(ArrayList<Double> output, double speedMult) {
         double pid_output1 = -pidController1.calculate((((output.get(2) / Math.PI) + 1) / 2 + offsetBL / 360) % 1, (backLeftEncoder.getVoltage() / 3.3));
         backLeftServo.setPower(pid_output1 * 2);
@@ -412,7 +402,7 @@ public class SwerveTeleOp extends LinearOpMode {
         double pid_output4 = -pidController4.calculate((((output.get(6) / Math.PI) + 1) / 2 + offsetFR / 360) % 1, (frontRightEncoder.getVoltage() / 3.3));
         frontRightServo.setPower(pid_output4 * 2);
 
-        if (Math.abs(pid_output1) < 0.45 && Math.abs(pid_output2) < 0.45 && Math.abs(pid_output3) < 0.45 && Math.abs(pid_output4) < 0.45) {
+        if (Math.abs(pid_output1) < 0.55 && Math.abs(pid_output2) < 0.55 && Math.abs(pid_output3) < 0.55 && Math.abs(pid_output4) < 0.55) {
             frontLeftMotor.setPower(output.get(5) * speedMult);
             backLeftMotor.setPower(output.get(3) * speedMult);
             frontRightMotor.setPower(output.get(7) * speedMult);

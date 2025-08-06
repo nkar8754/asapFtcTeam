@@ -1,6 +1,5 @@
 
 package org.firstinspires.ftc.teamcode;
-import com.qualcomm.robotcore.util.ElapsedTime;
 
 
 public class PidController{
@@ -10,7 +9,6 @@ public class PidController{
      public double Ki = 0;
      public double Kd = 0;
 
-     private ElapsedTime timer = new ElapsedTime();
      private double lastError = 0;
 
 
@@ -21,7 +19,6 @@ public class PidController{
           this.Ki = i;
           this.Kd = d;
 
-          this.timer = new ElapsedTime();
           this.lastError = 0;
      }
      
@@ -45,13 +42,11 @@ public class PidController{
      {
           double error = targetState - currentState;
           error = angleWrap(error);
-          integral += error * timer.seconds();
-          double derivative = (error - lastError) / timer.seconds();
+          integral += error * Ki;
+          double derivative = (error - lastError) * Kd;
           lastError = error;
 
-          timer.reset();
-
-          return (error * Kp) + (derivative * Kd) + (integral * Ki);
+          return error * Kp + derivative + integral;
      }
 }
 
