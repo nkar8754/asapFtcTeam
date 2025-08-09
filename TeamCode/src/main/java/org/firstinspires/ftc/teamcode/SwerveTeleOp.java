@@ -352,7 +352,7 @@ public class SwerveTeleOp extends LinearOpMode {
                 ));
 
                 matrix2d velocityWorld = new matrix2d(new ArrayList<Integer>(Arrays.asList(1, 2)));
-                velocityWorld.components = new ArrayList<Double>(Arrays.asList(gamepad1.left_stick_y / 1.5, gamepad1.left_stick_x / 1.5));
+                velocityWorld.components = new ArrayList<Double>(Arrays.asList(gamepad1.left_stick_y / 1.5, -gamepad1.left_stick_x / 1.5));
                 velocityWorld = matrix2d.matrixMultiply(referenceTransform, velocityWorld);
 
                 ArrayList<Double> output = swerveController.getVelocities(velocityWorld.components.get(0), velocityWorld.components.get(1), -gamepad1.right_stick_x / 360);
