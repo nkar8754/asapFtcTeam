@@ -355,7 +355,7 @@ public class SwerveTeleOp extends LinearOpMode {
                 velocityWorld.components = new ArrayList<Double>(Arrays.asList(gamepad1.left_stick_y / 1.5, -gamepad1.left_stick_x / 1.5));
                 velocityWorld = matrix2d.matrixMultiply(referenceTransform, velocityWorld);
 
-                ArrayList<Double> output = swerveController.getVelocities(velocityWorld.components.get(0), velocityWorld.components.get(1), -gamepad1.right_stick_x / 360);
+                ArrayList<Double> output = swerveController.getVelocities(velocityWorld.components.get(0), velocityWorld.components.get(1), gamepad1.right_stick_x / 360);
                 drive(output, speedMult);
 
 //                linkagePower = -extensionController.calculate(targetExtension, actualExtension);
