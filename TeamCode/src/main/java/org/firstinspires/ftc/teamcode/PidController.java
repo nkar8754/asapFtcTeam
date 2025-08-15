@@ -26,7 +26,7 @@ public class PidController{
           return Math.min(Math.max(x, min), max);
      }
 
-     double angleWrap(double difference) {
+     public static double angleWrap(double difference) {
           while (difference > 0.5) {
                difference -= 1;
           }

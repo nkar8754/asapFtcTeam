@@ -90,7 +90,7 @@ public class SwerveTeleOp extends LinearOpMode {
     private CRServo backRightServo;
 
     public static double kp = 2;
-    public static double ki = 0.01;
+    public static double ki = 0.0;
     public static double kd = 1;
     public static double lkp = 2.0;
     public static double lki = 0.0;
@@ -390,23 +390,47 @@ public class SwerveTeleOp extends LinearOpMode {
     }
 
     private void drive(ArrayList<Double> output, double speedMult) {
-        double pid_output1 = -pidController1.calculate((((output.get(2) / Math.PI) + 1) / 2 + offsetBL / 360) % 1, (backLeftEncoder.getVoltage() / 3.3));
+        double angleBL = (((output.get(2) / Math.PI) + 1) / 2 + offsetBL / 360) % 1;
+        double encoderBL = backLeftEncoder.getVoltage() / 3.3;
+        double angleBLOpposite = (encoderBL + 0.5) % 1;
+        boolean blReverse = Math.abs(PidController.angleWrap(angleBL - angleBLOpposite)) < 0.5;
+        if (blReverse) angleBL = (angleBL + 0.5) % 1;
+
+        double pid_output1 = -pidController1.calculate(angleBL, encoderBL);
         backLeftServo.setPower(pid_output1 * 2);
 
-        double pid_output2 = -pidController2.calculate((((output.get(0) / Math.PI) + 1) / 2 + offsetBR / 360) % 1, (backRightEncoder.getVoltage() / 3.3));
+        double angleBR = (((output.get(0) / Math.PI) + 1) / 2 + offsetBR / 360) % 1;
+        double encoderBR = backRightEncoder.getVoltage() / 3.3;
+        double angleBROpposite = (encoderBR + 0.5) % 1;
+        boolean brReverse = Math.abs(PidController.angleWrap(angleBR - angleBROpposite)) < 0.5;
+        if (brReverse) angleBR = (angleBR + 0.5) % 1;
+
+        double pid_output2 = -pidController2.calculate(angleBR, encoderBR);
         backRightServo.setPower(pid_output2 * 2);
 
-        double pid_output3 = -pidController3.calculate((((output.get(4) / Math.PI) + 1) / 2 + offsetFL / 360) % 1, (frontLeftEncoder.getVoltage() / 3.3));
+        double angleFL = (((output.get(4) / Math.PI) + 1) / 2 + offsetFL / 360) % 1;
+        double encoderFL = frontLeftEncoder.getVoltage() / 3.3;
+        double angleFLOpposite = (encoderFL + 0.5) % 1;
+        boolean flReverse = Math.abs(PidController.angleWrap(angleFL - angleFLOpposite)) < 0.5;
+        if (flReverse) angleFL = (angleFL + 0.5) % 1;
+
+        double pid_output3 = -pidController3.calculate(angleFL, encoderFL);
         frontLeftServo.setPower(pid_output3 * 2);
 
-        double pid_output4 = -pidController4.calculate((((output.get(6) / Math.PI) + 1) / 2 + offsetFR / 360) % 1, (frontRightEncoder.getVoltage() / 3.3));
+        double angleFR = (((output.get(6) / Math.PI) + 1) / 2 + offsetFR / 360) % 1;
+        double encoderFR = frontRightEncoder.getVoltage() / 3.3;
+        double angleFROpposite = (encoderFR + 0.5) % 1;
+        boolean frReverse = Math.abs(PidController.angleWrap(angleFR - angleFROpposite)) < 0.5;
+        if (frReverse) angleFR = (angleFR + 0.5) % 1;
+
+        double pid_output4 = -pidController4.calculate(angleFR, encoderFR);
         frontRightServo.setPower(pid_output4 * 2);
 
         if (Math.abs(pid_output1) < 0.55 && Math.abs(pid_output2) < 0.55 && Math.abs(pid_output3) < 0.55 && Math.abs(pid_output4) < 0.55) {
-            frontLeftMotor.setPower(output.get(5) * speedMult);
-            backLeftMotor.setPower(output.get(3) * speedMult);
-            frontRightMotor.setPower(output.get(7) * speedMult);
-            backRightMotor.setPower(output.get(1) * speedMult);
+            frontLeftMotor.setPower(output.get(5) * speedMult * (flReverse ? -1 : 1));
+            backLeftMotor.setPower(output.get(3) * speedMult * (blReverse ? -1 : 1));
+            frontRightMotor.setPower(output.get(7) * speedMult * (frReverse ? -1 : 1));
+            backRightMotor.setPower(output.get(1) * speedMult * (brReverse ? -1 : 1));
         } else {
             frontLeftMotor.setPower(0);
             backLeftMotor.setPower(0);
