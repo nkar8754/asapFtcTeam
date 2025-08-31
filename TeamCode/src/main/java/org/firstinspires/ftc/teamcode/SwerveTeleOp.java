@@ -118,6 +118,16 @@ public class SwerveTeleOp extends LinearOpMode {
 
     private SwerveKinematics swerveController = new SwerveKinematics(234, 304.812);
 
+    private double angleDiff(double a, double b) {
+        double v1x = Math.cos(a * 2 * Math.PI);
+        double v1y = Math.sin(a * 2 * Math.PI);
+
+        double v2x = Math.cos(b * 2 * Math.PI);
+        double v2y = Math.sin(b * 2 * Math.PI);
+
+        return v1x * v2x + v1y * v2y;
+    }
+
     @Override
     public void runOpMode() {
 //        slide1 = hardwareMap.get(DcMotorEx.class, "slide1");
@@ -357,6 +367,7 @@ public class SwerveTeleOp extends LinearOpMode {
 
                 ArrayList<Double> output = swerveController.getVelocities(velocityWorld.components.get(0), velocityWorld.components.get(1), gamepad1.right_stick_x / 360);
                 drive(output, speedMult);
+                          
 
 //                linkagePower = -extensionController.calculate(targetExtension, actualExtension);
 //                extension.setPower(linkagePower);
@@ -392,36 +403,36 @@ public class SwerveTeleOp extends LinearOpMode {
     private void drive(ArrayList<Double> output, double speedMult) {
         double angleBL = (((output.get(2) / Math.PI) + 1) / 2 + offsetBL / 360) % 1;
         double encoderBL = backLeftEncoder.getVoltage() / 3.3;
-        double angleBLOpposite = (encoderBL + 0.5) % 1;
-        boolean blReverse = Math.abs(PidController.angleWrap(angleBL - angleBLOpposite)) < 0.5;
-        if (blReverse) angleBL = (angleBL + 0.5) % 1;
+        double angleBLOpposite = (angleBL + 0.5) % 1;
+        boolean blReverse = angleDiff(encoderBL, angleBL) < 0;
+        if (blReverse) angleBL = angleBLOpposite;
 
         double pid_output1 = -pidController1.calculate(angleBL, encoderBL);
         backLeftServo.setPower(pid_output1 * 2);
 
         double angleBR = (((output.get(0) / Math.PI) + 1) / 2 + offsetBR / 360) % 1;
         double encoderBR = backRightEncoder.getVoltage() / 3.3;
-        double angleBROpposite = (encoderBR + 0.5) % 1;
-        boolean brReverse = Math.abs(PidController.angleWrap(angleBR - angleBROpposite)) < 0.5;
-        if (brReverse) angleBR = (angleBR + 0.5) % 1;
+        double angleBROpposite = (angleBR + 0.5) % 1;
+        boolean brReverse = angleDiff(encoderBR, angleBR) < 0;
+        if (brReverse) angleBR = angleBROpposite;
 
         double pid_output2 = -pidController2.calculate(angleBR, encoderBR);
         backRightServo.setPower(pid_output2 * 2);
 
         double angleFL = (((output.get(4) / Math.PI) + 1) / 2 + offsetFL / 360) % 1;
         double encoderFL = frontLeftEncoder.getVoltage() / 3.3;
-        double angleFLOpposite = (encoderFL + 0.5) % 1;
-        boolean flReverse = Math.abs(PidController.angleWrap(angleFL - angleFLOpposite)) < 0.5;
-        if (flReverse) angleFL = (angleFL + 0.5) % 1;
+        double angleFLOpposite = (angleFL + 0.5) % 1;
+        boolean flReverse =  angleDiff(encoderFL, angleFL) < 0;
+        if (flReverse) angleFL = angleFLOpposite;
 
         double pid_output3 = -pidController3.calculate(angleFL, encoderFL);
         frontLeftServo.setPower(pid_output3 * 2);
 
         double angleFR = (((output.get(6) / Math.PI) + 1) / 2 + offsetFR / 360) % 1;
         double encoderFR = frontRightEncoder.getVoltage() / 3.3;
-        double angleFROpposite = (encoderFR + 0.5) % 1;
-        boolean frReverse = Math.abs(PidController.angleWrap(angleFR - angleFROpposite)) < 0.5;
-        if (frReverse) angleFR = (angleFR + 0.5) % 1;
+        double angleFROpposite = (angleFR + 0.5) % 1;
+        boolean frReverse = angleDiff(encoderFR, angleFR) < 0;
+        if (frReverse) angleFR = angleFROpposite;
 
         double pid_output4 = -pidController4.calculate(angleFR, encoderFR);
         frontRightServo.setPower(pid_output4 * 2);
