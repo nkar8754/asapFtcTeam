@@ -96,10 +96,10 @@ public class SwerveTeleOp extends LinearOpMode {
     public static double lki = 0.0;
     public static double lkd = 0.0;
 
-    public static double offsetFR = -80;
-    public static double offsetBR = 340;
-    public static double offsetFL = 130;
-    public static double offsetBL = -40;
+    public static double offsetFR = 70;
+    public static double offsetBR = 40;
+    public static double offsetFL = 230;
+    public static double offsetBL = -110;
 
     AnalogInput backLeftEncoder;
     AnalogInput backRightEncoder;
@@ -362,10 +362,10 @@ public class SwerveTeleOp extends LinearOpMode {
                 ));
 
                 matrix2d velocityWorld = new matrix2d(new ArrayList<Integer>(Arrays.asList(1, 2)));
-                velocityWorld.components = new ArrayList<Double>(Arrays.asList(gamepad1.left_stick_y / 1.5, -gamepad1.left_stick_x / 1.5));
+                velocityWorld.components = new ArrayList<Double>(Arrays.asList(-gamepad1.left_stick_y / 1.5, gamepad1.left_stick_x / 1.5));
                 velocityWorld = matrix2d.matrixMultiply(referenceTransform, velocityWorld);
 
-                ArrayList<Double> output = swerveController.getVelocities(velocityWorld.components.get(0), velocityWorld.components.get(1), gamepad1.right_stick_x / 360);
+                ArrayList<Double> output = swerveController.getVelocities(velocityWorld.components.get(0), velocityWorld.components.get(1), -gamepad1.right_stick_x / 360);
                 drive(output, speedMult);
                           
 
