@@ -1,14 +1,6 @@
 package org.firstinspires.ftc.teamcode;
 
-import static org.firstinspires.ftc.robotcore.external.BlocksOpModeCompanion.hardwareMap;
-import static org.firstinspires.ftc.robotcore.external.BlocksOpModeCompanion.telemetry;
-import static org.firstinspires.ftc.teamcode.RobotMovement.followCurve;
-import static org.firstinspires.ftc.teamcode.RobotMovement.goToPosition;
-
-import com.acmerobotics.dashboard.config.Config;
 import com.qualcomm.hardware.sparkfun.SparkFunOTOS;
-import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
-import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.AnalogInput;
@@ -24,10 +16,8 @@ import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 
 import java.util.ArrayList;
 
-@Config
 @Autonomous
-public class Auto extends LinearOpMode {
-
+public class Auto2 extends LinearOpMode {
     private SparkFunOTOS odometry;
 
     private DcMotor frontLeftMotor;
@@ -47,13 +37,13 @@ public class Auto extends LinearOpMode {
     private Servo claw;
 
     public static double kp = 2;
-    public static double ki = 1;
-    public static double kd = 0.0;
+    public static double ki = 0.0;
+    public static double kd = 1;
 
-    public static double offsetFR = 0;
-    public static double offsetBR = 0;
-    public static double offsetFL = 0;
-    public static double offsetBL = 0;
+    public static double offsetFR = 70;
+    public static double offsetBR = 40;
+    public static double offsetFL = 230;
+    public static double offsetBL = -110;
 
     public static double svP = 0;
 
@@ -72,27 +62,10 @@ public class Auto extends LinearOpMode {
 
     @Override
     public void runOpMode() {
-        slide1 = hardwareMap.get(DcMotorEx.class, "slide1");
-        slide2 = hardwareMap.get(DcMotorEx.class, "slide2");
-        slide1.setTargetPosition(0);
-        slide2.setTargetPosition(0);
-        slide1.setPower(1);
-        slide2.setPower(1);
-        slide2.setDirection(DcMotorSimple.Direction.REVERSE);
-        slide1.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        slide2.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        slide1.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        slide2.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-
         frontLeftMotor = hardwareMap.get(DcMotorEx.class, "frontLeftMotor");
         backLeftMotor = hardwareMap.get(DcMotorEx.class, "backLeftMotor");
         frontRightMotor = hardwareMap.get(DcMotorEx.class, "frontRightMotor");
         backRightMotor = hardwareMap.get(DcMotorEx.class, "backRightMotor");
-
-        frontLeftServo = hardwareMap.get(CRServo.class, "frontLeftServo");
-        backLeftServo = hardwareMap.get(CRServo.class, "backLeftServo");
-        frontRightServo = hardwareMap.get(CRServo.class, "frontRightServo");
-        backRightServo = hardwareMap.get(CRServo.class, "backRightServo");
 
         backLeftEncoder = hardwareMap.get(AnalogInput.class, "backLeftEncoder");
         backRightEncoder = hardwareMap.get(AnalogInput.class, "backRightEncoder");
@@ -144,74 +117,100 @@ public class Auto extends LinearOpMode {
         //wrist: 1.01
         //slide: 980
         //inc: 1.616
-
-        double inclinationAngle = 1.59;
-        double previousInclination = 2;
-        int inclinationWrap = 1;
         ElapsedTime timer = new ElapsedTime();
 
-        claw.setPosition(-0.37);
-        wrist.setPosition(1.01);
-        slide1.setTargetPosition(980);
-        slide2.setTargetPosition(980);
+        Pose pose = new Pose(0, 0);
+        Pose vel = new Pose();
+        Pose acc = new Pose();
+
+        Path path = new Path();
+        path
+                .addPoint(new PathPoint(0, 0))
+                .addPoint(new PathPoint(200, 0))
+                .addPoint(new PathPoint(400, 400))
+                .addPoint(new PathPoint(600, 600))
+                .addPoint(new PathPoint(1000, 500))
+                .addPoint(new PathPoint(1400, 100))
+                .followRadius(200);
 
         while (timer.milliseconds() <= 1500) {
-            ArrayList<Double> output = swerveController.getVelocities(0.5,0, 0);
-            drive(output, 1);
+            double rotationRadians = (odometry.getPosition().h * Math.PI) / 180;
+            matrix2d referenceTransform = new matrix2d(new ArrayList<Integer>(Arrays.asList(2, 2)));
+            referenceTransform.components = new ArrayList<Double>(Arrays.asList(
+                    Math.cos(rotationRadians), -Math.sin(rotationRadians),
+                    Math.sin(rotationRadians), Math.cos(rotationRadians)
+            ));
+
+            double d = Math.min(1, Math.pow(pose.distance(path.getLastPoint()) / 160, 2));
+            acc.x *= d;
+            acc.y *= d;
+            vel.x += acc.x / 6;
+            vel.y += acc.y / 6;
+            vel.angle += acc.angle / 6;
+
+            path.update(pose);
+
+            Pose followPose = path.getFollowPose();
+            Circle followCircle = path.getFollowCircle();
+
+            acc.x = Math.cos(pose.angleTo(followPose));
+            acc.y = Math.sin(pose.angleTo(followPose));
+            acc.angle = Math.max(Math.min((followPose.angle - pose.angle), 0.01), -0.01);
+
+            matrix2d velocityWorld = new matrix2d(new ArrayList<Integer>(Arrays.asList(1, 2)));
+            velocityWorld.components = new ArrayList<Double>(Arrays.asList(vel.x, vel.y);
+            velocityWorld = matrix2d.matrixMultiply(referenceTransform, velocityWorld);
+
+            ArrayList<Double> output = swerveController.getVelocities(velocityWorld.components.get(0), velocityWorld.components.get(1), vel.angle);
+            drive(output, speedMult);
         }
 
         ArrayList<Double> output = swerveController.getVelocities(0,0, 0);
         drive(output, 1);
-
-        while (true) {
-            double currentInclination = inclinationEncoder.getVoltage() / 3.3;
-
-            if (previousInclination - currentInclination < -0.5) {
-                inclinationWrap--;
-            } else if (previousInclination - currentInclination > 0.5) {
-                inclinationWrap++;
-            }
-
-            double actualInclination = inclinationWrap + currentInclination;
-
-            double inclinationPower = inclinationController.calculate(inclinationAngle, actualInclination);
-            inclination.setPower(-inclinationPower);
-
-            previousInclination = currentInclination;
-
-            if (Math.abs(actualInclination - inclinationAngle) < 0.1) {
-                claw.setPosition(1.03);
-            } else {
-                claw.setPosition(-0.37);
-            }
-
-            wrist.setPosition(1.01);
-            slide1.setTargetPosition(980);
-            slide2.setTargetPosition(980);
-
-            telemetry.addData("Actual: ", actualInclination);
-            telemetry.update();
-        }
-}
+    }
 
     private void drive(ArrayList<Double> output, double speedMult) {
-        double pid_output1 = -pidController1.calculate((((output.get(2) / Math.PI) + 1) / 2 + offsetBL / 360) % 1, (backLeftEncoder.getVoltage() / 3.3));
+        double angleBL = (((output.get(2) / Math.PI) + 1) / 2 + offsetBL / 360) % 1;
+        double encoderBL = backLeftEncoder.getVoltage() / 3.3;
+        double angleBLOpposite = (angleBL + 0.5) % 1;
+        boolean blReverse = angleDiff(encoderBL, angleBL) < 0;
+        if (blReverse) angleBL = angleBLOpposite;
+
+        double pid_output1 = -pidController1.calculate(angleBL, encoderBL);
         backLeftServo.setPower(pid_output1 * 2);
 
-        double pid_output2 = -pidController2.calculate((((output.get(0) / Math.PI) + 1) / 2 + offsetBR / 360) % 1, (backRightEncoder.getVoltage() / 3.3));
+        double angleBR = (((output.get(0) / Math.PI) + 1) / 2 + offsetBR / 360) % 1;
+        double encoderBR = backRightEncoder.getVoltage() / 3.3;
+        double angleBROpposite = (angleBR + 0.5) % 1;
+        boolean brReverse = angleDiff(encoderBR, angleBR) < 0;
+        if (brReverse) angleBR = angleBROpposite;
+
+        double pid_output2 = -pidController2.calculate(angleBR, encoderBR);
         backRightServo.setPower(pid_output2 * 2);
 
-        double pid_output3 = -pidController3.calculate((((output.get(4) / Math.PI) + 1) / 2 + offsetFL / 360) % 1, (frontLeftEncoder.getVoltage() / 3.3));
+        double angleFL = (((output.get(4) / Math.PI) + 1) / 2 + offsetFL / 360) % 1;
+        double encoderFL = frontLeftEncoder.getVoltage() / 3.3;
+        double angleFLOpposite = (angleFL + 0.5) % 1;
+        boolean flReverse =  angleDiff(encoderFL, angleFL) < 0;
+        if (flReverse) angleFL = angleFLOpposite;
+
+        double pid_output3 = -pidController3.calculate(angleFL, encoderFL);
         frontLeftServo.setPower(pid_output3 * 2);
 
-        double pid_output4 = -pidController4.calculate((((output.get(6) / Math.PI) + 1) / 2 + offsetFR / 360) % 1, (frontRightEncoder.getVoltage() / 3.3));
+        double angleFR = (((output.get(6) / Math.PI) + 1) / 2 + offsetFR / 360) % 1;
+        double encoderFR = frontRightEncoder.getVoltage() / 3.3;
+        double angleFROpposite = (angleFR + 0.5) % 1;
+        boolean frReverse = angleDiff(encoderFR, angleFR) < 0;
+        if (frReverse) angleFR = angleFROpposite;
+
+        double pid_output4 = -pidController4.calculate(angleFR, encoderFR);
         frontRightServo.setPower(pid_output4 * 2);
 
-        if (Math.abs(pid_output1) < 0.1 && Math.abs(pid_output2) < 0.1 && Math.abs(pid_output3) < 0.1 && Math.abs(pid_output4) < 0.1) {
-            frontLeftMotor.setPower(output.get(5) * speedMult);
-            backLeftMotor.setPower(output.get(3) * speedMult);
-            frontRightMotor.setPower(output.get(7) * speedMult);
-            backRightMotor.setPower(output.get(1) * speedMult);
+        if (Math.abs(pid_output1) < 0.55 && Math.abs(pid_output2) < 0.55 && Math.abs(pid_output3) < 0.55 && Math.abs(pid_output4) < 0.55) {
+            frontLeftMotor.setPower(output.get(5) * speedMult * (flReverse ? -1 : 1));
+            backLeftMotor.setPower(output.get(3) * speedMult * (blReverse ? -1 : 1));
+            frontRightMotor.setPower(output.get(7) * speedMult * (frReverse ? -1 : 1));
+            backRightMotor.setPower(output.get(1) * speedMult * (brReverse ? -1 : 1));
         } else {
             frontLeftMotor.setPower(0);
             backLeftMotor.setPower(0);
