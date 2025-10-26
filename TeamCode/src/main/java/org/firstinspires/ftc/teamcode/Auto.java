@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode;
-
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import com.qualcomm.hardware.sparkfun.SparkFunOTOS;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
@@ -10,31 +12,28 @@ import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
-
+import org.firstinspires.ftc.teamcode.path.Path;
+import org.firstinspires.ftc.teamcode.path.PathPoint;
+import org.firstinspires.ftc.teamcode.geometry.Pose;
+import org.firstinspires.ftc.teamcode.geometry.Circle;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 
 import java.util.ArrayList;
 
 @Autonomous
-public class Auto2 extends LinearOpMode {
+public class Auto extends LinearOpMode {
     private SparkFunOTOS odometry;
 
     private DcMotor frontLeftMotor;
     private DcMotor backLeftMotor;
     private DcMotor frontRightMotor;
     private DcMotor backRightMotor;
-    private DcMotor slide1;
-    private DcMotor slide2;
 
     private CRServo frontLeftServo;
     private CRServo backLeftServo;
     private CRServo frontRightServo;
     private CRServo backRightServo;
-
-    private CRServo inclination;
-    private Servo wrist;
-    private Servo claw;
 
     public static double kp = 2;
     public static double ki = 0.0;
@@ -51,13 +50,11 @@ public class Auto2 extends LinearOpMode {
     AnalogInput backRightEncoder;
     AnalogInput frontLeftEncoder;
     AnalogInput frontRightEncoder;
-    AnalogInput inclinationEncoder;
 
     private PidController pidController1 = null;
     private PidController pidController2 = null;
     private PidController pidController3 = null;
     private PidController pidController4 = null;
-    private GeneralPid inclinationController = null;
     private SwerveKinematics swerveController = new SwerveKinematics(234, 304.812);
 
     @Override
@@ -71,11 +68,11 @@ public class Auto2 extends LinearOpMode {
         backRightEncoder = hardwareMap.get(AnalogInput.class, "backRightEncoder");
         frontLeftEncoder = hardwareMap.get(AnalogInput.class, "frontLeftEncoder");
         frontRightEncoder = hardwareMap.get(AnalogInput.class, "frontRightEncoder");
-        inclinationEncoder = hardwareMap.get(AnalogInput.class, "inclinationEncoder");
 
-        inclination = hardwareMap.get(CRServo.class, "inclination");
-        wrist = hardwareMap.get(Servo.class, "wrist");
-        claw = hardwareMap.get(Servo.class, "claw");
+        frontLeftServo = hardwareMap.get(CRServo.class, "frontLeftServo");
+        backLeftServo = hardwareMap.get(CRServo.class, "backLeftServo");
+        frontRightServo = hardwareMap.get(CRServo.class, "frontRightServo");
+        backRightServo = hardwareMap.get(CRServo.class, "backRightServo");
 
         odometry = hardwareMap.get(SparkFunOTOS.class, "sensor_otos");
         odometry.setLinearUnit(DistanceUnit.INCH);
@@ -97,7 +94,6 @@ public class Auto2 extends LinearOpMode {
         pidController2 = new PidController(kp, ki, kd);
         pidController3 = new PidController(kp, ki, kd);
         pidController4 = new PidController(kp, ki, kd);
-        inclinationController = new GeneralPid(2, 0, 0);
 
         telemetry.addData("Status", "Running");
         telemetry.update();
@@ -126,14 +122,11 @@ public class Auto2 extends LinearOpMode {
         Path path = new Path();
         path
                 .addPoint(new PathPoint(0, 0))
-                .addPoint(new PathPoint(200, 0))
-                .addPoint(new PathPoint(400, 400))
-                .addPoint(new PathPoint(600, 600))
-                .addPoint(new PathPoint(1000, 500))
-                .addPoint(new PathPoint(1400, 100))
-                .followRadius(200);
+                .addPoint(new PathPoint(5, 0))
+                .addPoint(new PathPoint(-5, 5))
+                .followRadius(20);
 
-        while (timer.milliseconds() <= 1500) {
+        while (timer.milliseconds() <= 30500) {
             double rotationRadians = (odometry.getPosition().h * Math.PI) / 180;
             matrix2d referenceTransform = new matrix2d(new ArrayList<Integer>(Arrays.asList(2, 2)));
             referenceTransform.components = new ArrayList<Double>(Arrays.asList(
@@ -148,6 +141,10 @@ public class Auto2 extends LinearOpMode {
             vel.y += acc.y / 6;
             vel.angle += acc.angle / 6;
 
+            vel.x *= 0.96;
+            vel.y *= 0.96;
+            vel.angle *= 0.96;
+
             path.update(pose);
 
             Pose followPose = path.getFollowPose();
@@ -157,12 +154,16 @@ public class Auto2 extends LinearOpMode {
             acc.y = Math.sin(pose.angleTo(followPose));
             acc.angle = Math.max(Math.min((followPose.angle - pose.angle), 0.01), -0.01);
 
+            pose.x = -odometry.getPosition().x;
+            pose.y = -odometry.getPosition().y;
+            pose.angle = odometry.getPosition().h;
+
             matrix2d velocityWorld = new matrix2d(new ArrayList<Integer>(Arrays.asList(1, 2)));
-            velocityWorld.components = new ArrayList<Double>(Arrays.asList(vel.x, vel.y);
+            velocityWorld.components = new ArrayList<Double>(Arrays.asList(vel.y * 200.0, vel.x * 200.0));
             velocityWorld = matrix2d.matrixMultiply(referenceTransform, velocityWorld);
 
-            ArrayList<Double> output = swerveController.getVelocities(velocityWorld.components.get(0), velocityWorld.components.get(1), vel.angle);
-            drive(output, speedMult);
+            ArrayList<Double> output = swerveController.getVelocities(velocityWorld.components.get(0), velocityWorld.components.get(1), 0);
+            drive(output, 1);
         }
 
         ArrayList<Double> output = swerveController.getVelocities(0,0, 0);
@@ -217,5 +218,15 @@ public class Auto2 extends LinearOpMode {
             frontRightMotor.setPower(0);
             backRightMotor.setPower(0);
         }
+    }
+
+    private double angleDiff(double a, double b) {
+        double v1x = Math.cos(a * 2 * Math.PI);
+        double v1y = Math.sin(a * 2 * Math.PI);
+
+        double v2x = Math.cos(b * 2 * Math.PI);
+        double v2y = Math.sin(b * 2 * Math.PI);
+
+        return v1x * v2x + v1y * v2y;
     }
 }

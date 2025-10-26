@@ -1,9 +1,9 @@
 package org.firstinspires.ftc.teamcode.path;
 
-import com.xcentrics.coyote.geometry.Circle;
-import com.xcentrics.coyote.geometry.Point;
-import com.xcentrics.coyote.geometry.Pose;
-import com.xcentrics.coyote.geometry.Segment;
+import org.firstinspires.ftc.teamcode.geometry.Circle;
+import org.firstinspires.ftc.teamcode.geometry.Point;
+import org.firstinspires.ftc.teamcode.geometry.Pose;
+import org.firstinspires.ftc.teamcode.geometry.Segment;
 
 import java.util.ArrayList;
 import java.util.Collections;

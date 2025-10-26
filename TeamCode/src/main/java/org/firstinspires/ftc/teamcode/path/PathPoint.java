@@ -1,6 +1,6 @@
 package org.firstinspires.ftc.teamcode.path;
 
-import com.xcentrics.coyote.geometry.Point;
+import org.firstinspires.ftc.teamcode.geometry.Point;
 
 import java.util.ArrayList;
 
