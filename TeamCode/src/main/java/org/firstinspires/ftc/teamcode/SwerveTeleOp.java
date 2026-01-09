@@ -128,6 +128,19 @@ public class SwerveTeleOp extends LinearOpMode {
         return v1x * v2x + v1y * v2y;
     }
 
+    private double getLaunchAngle(double posX, double posY, double v) {
+        double D = Math.sqrt(Math.pow(0 - posX, 2) + Math.pow (0 - posY, 2));
+        double H = 1.143;
+        double A = 9.81;
+
+        double a = (A * Math.pow(D, 2)) / (2 * Math.pow(v, 2));
+        double c = a + H;
+
+        double tanTheta = (D + Math.sqrt(Math.pow(D, 2) - 4 * a * c) / (2 * a));
+
+        return Math.atan(tanTheta);
+    }
+
     @Override
     public void runOpMode() {
 //        slide1 = hardwareMap.get(DcMotorEx.class, "slide1");
@@ -188,7 +201,7 @@ public class SwerveTeleOp extends LinearOpMode {
 //        });
 
         odometry = hardwareMap.get(SparkFunOTOS.class, "sensor_otos");
-        odometry.setLinearUnit(DistanceUnit.INCH);
+        odometry.setLinearUnit(DistanceUnit.METER);
         odometry.setAngularUnit(AngleUnit.DEGREES);
         odometry.setLinearScalar(1.008);
         odometry.setAngularScalar(0.992);

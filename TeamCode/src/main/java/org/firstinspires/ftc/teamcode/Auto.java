@@ -75,7 +75,7 @@ public class Auto extends LinearOpMode {
         backRightServo = hardwareMap.get(CRServo.class, "backRightServo");
 
         odometry = hardwareMap.get(SparkFunOTOS.class, "sensor_otos");
-        odometry.setLinearUnit(DistanceUnit.INCH);
+        odometry.setLinearUnit(DistanceUnit.METER);
         odometry.setAngularUnit(AngleUnit.DEGREES);
         odometry.setLinearScalar(1.008);
         odometry.setAngularScalar(0.992);
@@ -116,15 +116,16 @@ public class Auto extends LinearOpMode {
         ElapsedTime timer = new ElapsedTime();
 
         Pose pose = new Pose(0, 0);
-        Pose vel = new Pose();
-        Pose acc = new Pose();
+        Pose vel = new Pose(0,0);
+        Pose acc = new Pose(0,0);
 
         Path path = new Path();
         path
                 .addPoint(new PathPoint(0, 0))
-                .addPoint(new PathPoint(5, 0))
-                .addPoint(new PathPoint(-5, 5))
-                .followRadius(20);
+                .addPoint(new PathPoint(0.61, 0))
+                .addPoint(new PathPoint(-0.61, 0.61))
+                .followRadius(20)
+                .constantHeading(Math.PI / 2);
 
         while (timer.milliseconds() <= 30500) {
             double rotationRadians = (odometry.getPosition().h * Math.PI) / 180;
@@ -135,11 +136,17 @@ public class Auto extends LinearOpMode {
             ));
 
             double d = Math.min(1, Math.pow(pose.distance(path.getLastPoint()) / 160, 2));
+
             acc.x *= d;
             acc.y *= d;
+
             vel.x += acc.x / 6;
             vel.y += acc.y / 6;
             vel.angle += acc.angle / 6;
+
+            pose.x = -odometry.getPosition().x;
+            pose.y = -odometry.getPosition().y;
+            pose.angle = odometry.getPosition().h;
 
             vel.x *= 0.96;
             vel.y *= 0.96;
@@ -153,10 +160,6 @@ public class Auto extends LinearOpMode {
             acc.x = Math.cos(pose.angleTo(followPose));
             acc.y = Math.sin(pose.angleTo(followPose));
             acc.angle = Math.max(Math.min((followPose.angle - pose.angle), 0.01), -0.01);
-
-            pose.x = -odometry.getPosition().x;
-            pose.y = -odometry.getPosition().y;
-            pose.angle = odometry.getPosition().h;
 
             matrix2d velocityWorld = new matrix2d(new ArrayList<Integer>(Arrays.asList(1, 2)));
             velocityWorld.components = new ArrayList<Double>(Arrays.asList(vel.y * 200.0, vel.x * 200.0));
