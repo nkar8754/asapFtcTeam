@@ -84,10 +84,18 @@ public class SwerveTeleOp extends LinearOpMode {
     private DcMotor frontRightMotor;
     private DcMotor backRightMotor;
 
+    private DcMotor shooterMotor;
+
     private CRServo frontLeftServo;
     private CRServo backLeftServo;
     private CRServo frontRightServo;
     private CRServo backRightServo;
+
+    private Servo intakeArm;
+    private CRServo intake;
+
+
+
 
     public static double kp = 2;
     public static double ki = 0.0;
@@ -152,13 +160,22 @@ public class SwerveTeleOp extends LinearOpMode {
 //        slide2.setDirection(DcMotorSimple.Direction.REVERSE);
 //        slide1.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
 //        slide2.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-//        slide1.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+//        slide1.setMode(DcMotor.RunMode.RUN_TO_POSITION);5
 //        slide2.setMode(DcMotor.RunMode.RUN_TO_POSITION);
 //
 //        extension = hardwareMap.get(CRServo.class, "extension");
 //        inclination = hardwareMap.get(CRServo.class, "inclination");
 //        wrist = hardwareMap.get(Servo.class, "wrist");
 //        claw = hardwareMap.get(Servo.class, "claw");
+
+        shooterMotor = hardwareMap.get(DcMotor.class, "shooterMotor");
+        intakeArm = hardwareMap.get(Servo.class, "intakeArm");
+        intake = hardwareMap.get(CRServo.class, "intake");
+
+        shooterMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        shooterMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
+
+
 
         frontLeftMotor = hardwareMap.get(DcMotorEx.class, "frontLeftMotor");
         backLeftMotor = hardwareMap.get(DcMotorEx.class, "backLeftMotor");
@@ -211,6 +228,7 @@ public class SwerveTeleOp extends LinearOpMode {
         odometry.setPosition(currentPosition);
 
         waitForStart();
+        double servoPos = 0.5;   // starting angle
 
         pidController1 = new PidController(kp, ki, kd);
         pidController2 = new PidController(kp, ki, kd);
@@ -222,14 +240,54 @@ public class SwerveTeleOp extends LinearOpMode {
 
         List<LynxModule> allHubs = hardwareMap.getAll(LynxModule.class);
 
+
+
         for (LynxModule hub : allHubs) {
             hub.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL);
         }
 
         while (opModeIsActive()) {
+
             for (LynxModule hub : allHubs) {
                 hub.clearBulkCache();
             }
+
+            if (gamepad1.dpad_up) {
+                servoPos += 0.01;
+            }
+            if (gamepad1.dpad_down) {
+                servoPos -= 0.01;
+            }
+
+            double intakePower = 0;
+
+// RB = intake
+            if (gamepad1.right_bumper) {
+                intakePower = 1;
+            }
+// LT = reverse
+            else if (gamepad1.left_trigger > 0.05) {
+                intakePower = -1;
+            }
+            else {
+                intakePower = 0;
+            }
+
+            intake.setPower(intakePower);
+
+
+            servoPos = Math.max(0.0, Math.min(1.0, servoPos));
+            intakeArm.setPosition(servoPos);
+
+            telemetry.update();
+
+            if (gamepad1.dpad_up) {
+                intakeArm.setPosition(1.0);
+            } else if (gamepad1.dpad_down) {
+                intakeArm.setPosition(0.0);
+            }
+
+
 
             pidController1.Kp = kp;
             pidController1.Ki = ki;
@@ -363,7 +421,7 @@ public class SwerveTeleOp extends LinearOpMode {
 //                grabbing = false;
                 double speedMult = 1;
 
-                if (gamepad1.left_stick_button) {
+                if (gamepad1.right_bumper ) {
                     speedMult = 0.6;
                 }
 
@@ -410,6 +468,12 @@ public class SwerveTeleOp extends LinearOpMode {
             telemetry.addData("Y: ", odometry.getPosition().y);
             telemetry.addData("rot: ", odometry.getPosition().h);
             telemetry.update();
+            if (gamepad1.right_trigger > 0.2) {
+                shooterMotor.setPower(-1);
+            } else {
+                shooterMotor.setPower(0);
+            }
+
         }
     }
 

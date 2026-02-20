@@ -127,7 +127,7 @@ public class Auto extends LinearOpMode {
                 .followRadius(20)
                 .constantHeading(Math.PI / 2);
 
-        while (timer.milliseconds() <= 30500) {
+        while (timer.milliseconds() <= 600) {//30500) {
             double rotationRadians = (odometry.getPosition().h * Math.PI) / 180;
             matrix2d referenceTransform = new matrix2d(new ArrayList<Integer>(Arrays.asList(2, 2)));
             referenceTransform.components = new ArrayList<Double>(Arrays.asList(
@@ -135,7 +135,7 @@ public class Auto extends LinearOpMode {
                     Math.sin(rotationRadians), Math.cos(rotationRadians)
             ));
 
-            double d = Math.min(1, Math.pow(pose.distance(path.getLastPoint()) / 160, 2));
+           /** double d = Math.min(1, Math.pow(pose.distance(path.getLastPoint()) / 160, 2));
 
             acc.x *= d;
             acc.y *= d;
@@ -159,10 +159,10 @@ public class Auto extends LinearOpMode {
 
             acc.x = Math.cos(pose.angleTo(followPose));
             acc.y = Math.sin(pose.angleTo(followPose));
-            acc.angle = Math.max(Math.min((followPose.angle - pose.angle), 0.01), -0.01);
+            acc.angle = Math.max(Math.min((followPose.angle - pose.angle), 0.01), -0.01);**/
 
             matrix2d velocityWorld = new matrix2d(new ArrayList<Integer>(Arrays.asList(1, 2)));
-            velocityWorld.components = new ArrayList<Double>(Arrays.asList(vel.y * 200.0, vel.x * 200.0));
+            velocityWorld.components = new ArrayList<Double>(Arrays.asList(2.0, 0.0));//Arrays.asList(vel.y * 200.0, vel.x * 200.0));
             velocityWorld = matrix2d.matrixMultiply(referenceTransform, velocityWorld);
 
             ArrayList<Double> output = swerveController.getVelocities(velocityWorld.components.get(0), velocityWorld.components.get(1), 0);
