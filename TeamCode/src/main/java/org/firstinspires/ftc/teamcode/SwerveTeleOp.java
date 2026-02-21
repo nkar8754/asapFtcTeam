@@ -95,7 +95,8 @@ public class SwerveTeleOp extends LinearOpMode {
     private Servo topFlap;
     private Servo bottomFlap;
     private CRServo intake;
-    private Motor intakeMotor;
+    private DcMotor intakeMotor;
+
 
 
 
@@ -231,6 +232,12 @@ public class SwerveTeleOp extends LinearOpMode {
         odometry.resetTracking();
         SparkFunOTOS.Pose2D currentPosition = new SparkFunOTOS.Pose2D(0, 0, 0);
         odometry.setPosition(currentPosition);
+        bottomFlap = hardwareMap.get(Servo.class, "bottomFlap");
+        topFlap = hardwareMap.get(Servo.class, "topFlap");
+
+        bottomFlap.setPosition(0.0);
+        topFlap.setPosition(0.0);
+
 
         waitForStart();
 
@@ -249,6 +256,9 @@ public class SwerveTeleOp extends LinearOpMode {
         for (LynxModule hub : allHubs) {
             hub.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL);
         }
+
+        double pos = 0.5;   // start in the middle
+
 
         while (opModeIsActive()) {
 
