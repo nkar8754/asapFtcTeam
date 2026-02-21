@@ -258,11 +258,11 @@ public class SwerveTeleOp extends LinearOpMode {
             double intakePower = 0;
 
 // RB = intake
-            if (gamepad1.right_bumper) {
+            if (gamepad1.left_bumper) {
                 intakePower = 1;
             }
 // LT = reverse
-            else if (gamepad1.right_trigger > 0.05) {
+            else if (gamepad1.left_trigger > 0.05) {
                 intakePower = -1;
             }
             else {
