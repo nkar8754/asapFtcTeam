@@ -91,9 +91,10 @@ public class SwerveTeleOp extends LinearOpMode {
     private CRServo frontRightServo;
     private CRServo backRightServo;
 
-    private Servo intakeArm;
+    private Servo topFlap;
+    private Servo bottomFlap;
     private CRServo intake;
-
+    private Motor intakeMotor;
 
 
 
@@ -169,8 +170,11 @@ public class SwerveTeleOp extends LinearOpMode {
 //        claw = hardwareMap.get(Servo.class, "claw");
 
         shooterMotor = hardwareMap.get(DcMotor.class, "shooterMotor");
-        intakeArm = hardwareMap.get(Servo.class, "intakeArm");
+        intakeMotor = hardwareMap.get(DcMotorEx.class, "intakeMotor");
+        bottomFlap = hardwareMap.get(Servo.class, "bottomFlap");
+        topFlap = hardwareMap.get(Servo.class, "topFlap");
         intake = hardwareMap.get(CRServo.class, "intake");
+
 
         shooterMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         shooterMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
@@ -228,7 +232,6 @@ public class SwerveTeleOp extends LinearOpMode {
         odometry.setPosition(currentPosition);
 
         waitForStart();
-        double servoPos = 0.5;   // starting angle
 
         pidController1 = new PidController(kp, ki, kd);
         pidController2 = new PidController(kp, ki, kd);
@@ -252,13 +255,6 @@ public class SwerveTeleOp extends LinearOpMode {
                 hub.clearBulkCache();
             }
 
-            if (gamepad1.dpad_up) {
-                servoPos += 0.01;
-            }
-            if (gamepad1.dpad_down) {
-                servoPos -= 0.01;
-            }
-
             double intakePower = 0;
 
 // RB = intake
@@ -266,7 +262,7 @@ public class SwerveTeleOp extends LinearOpMode {
                 intakePower = 1;
             }
 // LT = reverse
-            else if (gamepad1.left_trigger > 0.05) {
+            else if (gamepad1.right_trigger > 0.05) {
                 intakePower = -1;
             }
             else {
@@ -274,19 +270,18 @@ public class SwerveTeleOp extends LinearOpMode {
             }
 
             intake.setPower(intakePower);
+            intakeMotor.setPower(intakePower);
 
-
-            servoPos = Math.max(0.0, Math.min(1.0, servoPos));
-            intakeArm.setPosition(servoPos);
-
-            telemetry.update();
-
-            if (gamepad1.dpad_up) {
-                intakeArm.setPosition(1.0);
-            } else if (gamepad1.dpad_down) {
-                intakeArm.setPosition(0.0);
+            if (gamepad1.dpad_down) {
+                bottomFlap.setPosition(1.0);
+            } else if (gamepad1.dpad_up) {
+                topFlap.setPosition(1.0);
+            } else {
+                bottomFlap.setPosition(0.0);
+                topFlap.setPosition(0.0);
             }
 
+            telemetry.update();
 
 
             pidController1.Kp = kp;
