@@ -469,7 +469,7 @@ public class SwerveTeleOp extends LinearOpMode {
             telemetry.addData("rot: ", odometry.getPosition().h);
             telemetry.update();
             if (gamepad1.right_trigger > 0.2) {
-                shooterMotor.setPower(-1);
+                shooterMotor.setPower(1);
             } else {
                 shooterMotor.setPower(0);
             }
