@@ -170,7 +170,7 @@ public class SwerveTeleOp extends LinearOpMode {
 //        claw = hardwareMap.get(Servo.class, "claw");
 
         shooterMotor = hardwareMap.get(DcMotor.class, "shooterMotor");
-        intakeMotor = hardwareMap.get(DcMotorEx.class, "intakeMotor");
+        intakeMotor = hardwareMap.get(DcMotor.class, "intakeMotor");
         bottomFlap = hardwareMap.get(Servo.class, "bottomFlap");
         topFlap = hardwareMap.get(Servo.class, "topFlap");
         intake = hardwareMap.get(CRServo.class, "intake");
