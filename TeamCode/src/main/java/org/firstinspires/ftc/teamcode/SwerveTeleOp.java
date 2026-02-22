@@ -108,7 +108,7 @@ public class SwerveTeleOp extends LinearOpMode {
     public static double lkd = 0.0;
 
     public static double offsetFR = 70;
-    public static double offsetBR = 40;
+    public static double offsetBR = 60;
     public static double offsetFL = 230;
     public static double offsetBL = -110;
 
@@ -235,8 +235,8 @@ public class SwerveTeleOp extends LinearOpMode {
         bottomFlap = hardwareMap.get(Servo.class, "bottomFlap");
         topFlap = hardwareMap.get(Servo.class, "topFlap");
 
-        bottomFlap.setPosition(0.0);
-        topFlap.setPosition(0.0);
+        bottomFlap.setPosition(0.4);
+        topFlap.setPosition(0.7);
 
 
         waitForStart();
@@ -284,12 +284,12 @@ public class SwerveTeleOp extends LinearOpMode {
             intakeMotor.setPower(intakePower);
 
             if (gamepad1.dpad_down) {
-                bottomFlap.setPosition(1.0);
+                bottomFlap.setPosition(0.5);
             } else if (gamepad1.dpad_up) {
-                topFlap.setPosition(1.0);
-            } else {
-                bottomFlap.setPosition(0.0);
                 topFlap.setPosition(0.0);
+            } else {
+                bottomFlap.setPosition(0.4);
+                topFlap.setPosition(0.7);
             }
 
             telemetry.update();
@@ -475,10 +475,16 @@ public class SwerveTeleOp extends LinearOpMode {
             telemetry.addData("rot: ", odometry.getPosition().h);
             telemetry.update();
             if (gamepad1.right_trigger > 0.2) {
-                shooterMotor.setPower(1);
+                shooterMotor.setPower(0.7);
+
+            } else if (gamepad1.right_bumper) {
+                shooterMotor.setPower(-1);
             } else {
                 shooterMotor.setPower(0);
             }
+
+
+
 
         }
     }
