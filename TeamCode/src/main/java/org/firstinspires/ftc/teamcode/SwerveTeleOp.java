@@ -107,10 +107,10 @@ public class SwerveTeleOp extends LinearOpMode {
     public static double lki = 0.0;
     public static double lkd = 0.0;
 
-    public static double offsetFR = -85;
-    public static double offsetBR = -20;
-    public static double offsetFL = 90;
-    public static double offsetBL = -30;
+    public static double offsetFR = 90;
+    public static double offsetBR = -15;
+    public static double offsetFL = 260;
+    public static double offsetBL = 155;
 
     AnalogInput backLeftEncoder;
     AnalogInput backRightEncoder;
@@ -527,8 +527,8 @@ public class SwerveTeleOp extends LinearOpMode {
         frontRightServo.setPower(pid_output4 * 2);
 
         if (Math.abs(pid_output1) < 0.55 && Math.abs(pid_output2) < 0.55 && Math.abs(pid_output3) < 0.55 && Math.abs(pid_output4) < 0.55) {
-            frontLeftMotor.setPower(output.get(5) * speedMult * (flReverse ? -1 : 1));
-            backLeftMotor.setPower(output.get(3) * speedMult * (blReverse ? -1 : 1));
+            frontLeftMotor.setPower(output.get(5) * speedMult * (flReverse ? 1 : -1));
+            backLeftMotor.setPower(output.get(3) * speedMult * (blReverse ? 1 : -1));
             frontRightMotor.setPower(output.get(7) * speedMult * (frReverse ? -1 : 1));
             backRightMotor.setPower(output.get(1) * speedMult * (brReverse ? -1 : 1));
         } else {

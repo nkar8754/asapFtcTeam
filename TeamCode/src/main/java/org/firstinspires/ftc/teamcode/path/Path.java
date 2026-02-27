@@ -250,8 +250,7 @@ public class Path {
 
     public boolean isComplete() {
         return
-                robot_pose.distance(getLastPoint()) < position_precision &&
-                Math.abs(robot_pose.angle - getHeadingGoal(heading_method, getFollowPose())) < heading_precision;
+                robot_pose.distance(getLastPoint()) < position_precision;
     }
 
     public PathPoint getFirstUnpassedPoint() {

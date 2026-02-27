@@ -2,6 +2,8 @@ package org.firstinspires.ftc.teamcode;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+
+import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.hardware.sparkfun.SparkFunOTOS;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
@@ -39,10 +41,10 @@ public class Auto extends LinearOpMode {
     public static double ki = 0.0;
     public static double kd = 1;
 
-    public static double offsetFR = 70;
-    public static double offsetBR = 40;
-    public static double offsetFL = 230;
-    public static double offsetBL = -110;
+    public static double offsetFR = 90;
+    public static double offsetBR = -15;
+    public static double offsetFL = 260;
+    public static double offsetBL = 155;
 
     public static double svP = 0;
 
@@ -56,6 +58,36 @@ public class Auto extends LinearOpMode {
     private PidController pidController3 = null;
     private PidController pidController4 = null;
     private SwerveKinematics swerveController = new SwerveKinematics(234, 304.812);
+
+    class Robot {
+        Pose pose = new Pose(200, 200);
+        Pose vel = new Pose();
+        Pose acc = new Pose();
+
+        final double DAMP = 0.96;
+        final double DAMP_ANGLE = 0.90;
+
+        public void update(Path path) {
+
+            //double d = Math.min(1, Math.pow(pose.distance(path.getLastPoint()) / 160, 2));
+            double d = 0.01;
+
+            acc.x *= d;
+            acc.y *= d;
+
+            vel.x += acc.x / 6;
+            vel.y += acc.y / 6;
+            vel.angle += acc.angle / 6;
+
+            pose.x = -odometry.getPosition().y * 100;
+            pose.y = odometry.getPosition().x * 100;
+            pose.angle += vel.angle;
+
+            vel.x *= DAMP;
+            vel.y *= DAMP;
+            vel.angle *= DAMP_ANGLE;
+        }
+    }
 
     @Override
     public void runOpMode() {
@@ -115,19 +147,17 @@ public class Auto extends LinearOpMode {
         //inc: 1.616
         ElapsedTime timer = new ElapsedTime();
 
-        Pose pose = new Pose(0, 0);
-        Pose vel = new Pose(0,0);
-        Pose acc = new Pose(0,0);
-
         Path path = new Path();
-        path
-                .addPoint(new PathPoint(0, 0))
-                .addPoint(new PathPoint(0.61, 0))
-                .addPoint(new PathPoint(-0.61, 0.61))
-                .followRadius(20)
-                .constantHeading(Math.PI / 2);
+        path.addPoint(new PathPoint(0, 31));
+        path.addPoint(new PathPoint(-41, -41));
+        path.addPoint(new PathPoint(0, -41));
+        path.addPoint(new PathPoint(0, 0));
+        path.followRadius(200);
+        path.constantHeading(Math.PI / 2);
 
-        while (timer.milliseconds() <= 600) {//30500) {
+        Robot robot = new Robot();
+
+        while (timer.milliseconds() <= 30000 && opModeIsActive()) {//30500) {
             double rotationRadians = (odometry.getPosition().h * Math.PI) / 180;
             matrix2d referenceTransform = new matrix2d(new ArrayList<Integer>(Arrays.asList(2, 2)));
             referenceTransform.components = new ArrayList<Double>(Arrays.asList(
@@ -135,38 +165,34 @@ public class Auto extends LinearOpMode {
                     Math.sin(rotationRadians), Math.cos(rotationRadians)
             ));
 
-            double d = Math.min(1, Math.pow(pose.distance(path.getLastPoint()) / 160, 2));
+            robot.update(path);
+            path.update(robot.pose);
 
-            acc.x *= d;
-            acc.y *= d;
-
-            vel.x += acc.x / 6;
-            vel.y += acc.y / 6;
-            vel.angle += acc.angle / 6;
-
-            pose.x = -odometry.getPosition().x;
-            pose.y = -odometry.getPosition().y;
-            pose.angle = odometry.getPosition().h;
-
-            vel.x *= 0.96;
-            vel.y *= 0.96;
-            vel.angle *= 0.96;
-
-            path.update(pose);
-
-            Pose followPose = path.getFollowPose();
+            Pose follow_pose = path.getFollowPose();
             Circle followCircle = path.getFollowCircle();
 
-            acc.x = Math.cos(pose.angleTo(followPose));
-            acc.y = Math.sin(pose.angleTo(followPose));
-            acc.angle = Math.max(Math.min((followPose.angle - pose.angle), 0.01), -0.01);
+            robot.acc.x = Math.cos(robot.pose.angleTo(follow_pose));
+            robot.acc.y = Math.sin(robot.pose.angleTo(follow_pose));
+            robot.acc.angle = Math.max(Math.min((follow_pose.angle-robot.pose.angle), 0.01), -0.01);
 
             matrix2d velocityWorld = new matrix2d(new ArrayList<Integer>(Arrays.asList(1, 2)));
-            velocityWorld.components = new ArrayList<Double>(Arrays.asList(vel.y * 200.0, vel.x * 200.0));
+            velocityWorld.components = new ArrayList<Double>(Arrays.asList(robot.vel.x * 3.0, robot.vel.y * 3.0));
             velocityWorld = matrix2d.matrixMultiply(referenceTransform, velocityWorld);
 
             ArrayList<Double> output = swerveController.getVelocities(velocityWorld.components.get(0), velocityWorld.components.get(1), 0);
             drive(output, 1);
+
+            telemetry.addData("posx: ", robot.pose.x);
+            telemetry.addData("posy: ", robot.pose.y);
+            telemetry.addData("velx: ", robot.vel.x);
+            telemetry.addData("vely: ", robot.vel.y);
+            telemetry.addData("accx: ", robot.acc.x / 3);
+            telemetry.addData("accy: ", robot.acc.y / 3);
+            telemetry.addData("followx", follow_pose.x);
+            telemetry.addData("followy", follow_pose.y);
+            telemetry.addData("distance", follow_pose.distance(path.getLastPoint()));
+            telemetry.addData("passed", path.getLastPoint().passed);
+            telemetry.update();
         }
 
         ArrayList<Double> output = swerveController.getVelocities(0,0, 0);
@@ -211,8 +237,8 @@ public class Auto extends LinearOpMode {
         frontRightServo.setPower(pid_output4 * 2);
 
         if (Math.abs(pid_output1) < 0.55 && Math.abs(pid_output2) < 0.55 && Math.abs(pid_output3) < 0.55 && Math.abs(pid_output4) < 0.55) {
-            frontLeftMotor.setPower(output.get(5) * speedMult * (flReverse ? -1 : 1));
-            backLeftMotor.setPower(output.get(3) * speedMult * (blReverse ? -1 : 1));
+            frontLeftMotor.setPower(output.get(5) * speedMult * (flReverse ? 1 : -1));
+            backLeftMotor.setPower(output.get(3) * speedMult * (blReverse ? 1 : -1));
             frontRightMotor.setPower(output.get(7) * speedMult * (frReverse ? -1 : 1));
             backRightMotor.setPower(output.get(1) * speedMult * (brReverse ? -1 : 1));
         } else {
@@ -233,3 +259,5 @@ public class Auto extends LinearOpMode {
         return v1x * v2x + v1y * v2y;
     }
 }
+
+
