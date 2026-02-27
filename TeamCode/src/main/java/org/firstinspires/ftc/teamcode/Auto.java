@@ -60,7 +60,7 @@ public class Auto extends LinearOpMode {
     private SwerveKinematics swerveController = new SwerveKinematics(234, 304.812);
 
     class Robot {
-        Pose pose = new Pose(200, 200);
+        Pose pose = new Pose(0, 0);
         Pose vel = new Pose();
         Pose acc = new Pose();
 
@@ -151,8 +151,8 @@ public class Auto extends LinearOpMode {
         path.addPoint(new PathPoint(0, 31));
         path.addPoint(new PathPoint(-41, -41));
         path.addPoint(new PathPoint(0, -41));
-        path.addPoint(new PathPoint(0, 0));
-        path.followRadius(200);
+        path.addPoint(new PathPoint(10, 0));
+        path.followRadius(1);
         path.constantHeading(Math.PI / 2);
 
         Robot robot = new Robot();
