@@ -107,10 +107,10 @@ public class SwerveTeleOp extends LinearOpMode {
     public static double lki = 0.0;
     public static double lkd = 0.0;
 
-    public static double offsetFR = 70;
-    public static double offsetBR = 60;
-    public static double offsetFL = 230;
-    public static double offsetBL = -110;
+    public static double offsetFR = -85;
+    public static double offsetBR = -20;
+    public static double offsetFL = 90;
+    public static double offsetBL = -30;
 
     AnalogInput backLeftEncoder;
     AnalogInput backRightEncoder;
