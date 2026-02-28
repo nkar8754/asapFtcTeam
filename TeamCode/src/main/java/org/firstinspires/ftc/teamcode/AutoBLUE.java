@@ -156,10 +156,10 @@ public class Auto extends LinearOpMode {
 
         Path path = new Path();
         path.addPoint(new PathPoint(0, 0));
-        path.addPoint(new PathPoint(0.4272, 154.3579));
-        path.addPoint(new PathPoint(71.0754, 274.5056));
+        path.addPoint(new PathPoint(-0.4272, 154.3579));
+        path.addPoint(new PathPoint(-71.0754, 274.5056));
         path.followRadius(10);
-        path.constantHeading(-0.9288);
+        path.constantHeading(0.9288);
 
         Robot robot = new Robot();
 
