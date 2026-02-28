@@ -57,20 +57,19 @@ public class Auto extends LinearOpMode {
     private PidController pidController2 = null;
     private PidController pidController3 = null;
     private PidController pidController4 = null;
+    private PidController rotator = null;
     private SwerveKinematics swerveController = new SwerveKinematics(234, 304.812);
-
     class Robot {
-        Pose pose = new Pose(200, 200);
-        Pose vel = new Pose();
-        Pose acc = new Pose();
+        public Pose pose = new Pose(0, 0);
+        public Pose vel = new Pose();
+        public Pose acc = new Pose();
 
-        final double DAMP = 0.96;
-        final double DAMP_ANGLE = 0.90;
+        final double DAMP = 0.87;
+        final double DAMP_ANGLE = 0.80;
 
         public void update(Path path) {
 
-            //double d = Math.min(1, Math.pow(pose.distance(path.getLastPoint()) / 160, 2));
-            double d = 0.01;
+            double d = Math.min(1, Math.pow(pose.distance(path.getLastPoint()) / 160, 2));
 
             acc.x *= d;
             acc.y *= d;
@@ -81,11 +80,19 @@ public class Auto extends LinearOpMode {
 
             pose.x = -odometry.getPosition().y * 100;
             pose.y = odometry.getPosition().x * 100;
-            pose.angle += vel.angle;
+            pose.angle = (odometry.getPosition().h * Math.PI) / 180.0;
 
             vel.x *= DAMP;
             vel.y *= DAMP;
             vel.angle *= DAMP_ANGLE;
+
+            double length = Math.sqrt(vel.x * vel.x + vel.y * vel.y);
+            Pose velDir = new Pose(vel.x / length, vel.y / length);
+
+            if (length > 0.1) {
+                vel.x = velDir.x * 0.1;
+                vel.y = velDir.y * 0.1;
+            }
         }
     }
 
@@ -148,17 +155,16 @@ public class Auto extends LinearOpMode {
         ElapsedTime timer = new ElapsedTime();
 
         Path path = new Path();
-        path.addPoint(new PathPoint(0, 31));
-        path.addPoint(new PathPoint(-41, -41));
-        path.addPoint(new PathPoint(0, -41));
         path.addPoint(new PathPoint(0, 0));
-        path.followRadius(200);
-        path.constantHeading(Math.PI / 2);
+        path.addPoint(new PathPoint(0.4272, 154.3579));
+        path.addPoint(new PathPoint(71.0754, 274.5056));
+        path.followRadius(10);
+        path.constantHeading(-0.9288);
 
         Robot robot = new Robot();
 
         while (timer.milliseconds() <= 30000 && opModeIsActive()) {//30500) {
-            double rotationRadians = (odometry.getPosition().h * Math.PI) / 180;
+            double rotationRadians = (odometry.getPosition().h * Math.PI) / 180.0;
             matrix2d referenceTransform = new matrix2d(new ArrayList<Integer>(Arrays.asList(2, 2)));
             referenceTransform.components = new ArrayList<Double>(Arrays.asList(
                     Math.cos(rotationRadians), -Math.sin(rotationRadians),
@@ -176,22 +182,24 @@ public class Auto extends LinearOpMode {
             robot.acc.angle = Math.max(Math.min((follow_pose.angle-robot.pose.angle), 0.01), -0.01);
 
             matrix2d velocityWorld = new matrix2d(new ArrayList<Integer>(Arrays.asList(1, 2)));
-            velocityWorld.components = new ArrayList<Double>(Arrays.asList(robot.vel.x * 3.0, robot.vel.y * 3.0));
+            velocityWorld.components = new ArrayList<Double>(Arrays.asList(robot.vel.y * 4.4, robot.vel.x * 4.4));
             velocityWorld = matrix2d.matrixMultiply(referenceTransform, velocityWorld);
 
-            ArrayList<Double> output = swerveController.getVelocities(velocityWorld.components.get(0), velocityWorld.components.get(1), 0);
+            ArrayList<Double> output = swerveController.getVelocities(velocityWorld.components.get(0), velocityWorld.components.get(1), robot.vel.angle / 22);
             drive(output, 1);
 
-            telemetry.addData("posx: ", robot.pose.x);
-            telemetry.addData("posy: ", robot.pose.y);
-            telemetry.addData("velx: ", robot.vel.x);
-            telemetry.addData("vely: ", robot.vel.y);
+            telemetry.addData("posx: ", path.robot_pose.x);
+            telemetry.addData("posy: ", path.robot_pose.y);
+            telemetry.addData("angle: ", (odometry.getPosition().h * Math.PI) / 180.0);
+            telemetry.addData("velx: ", robot.vel.x * 3);
+            telemetry.addData("vely: ", robot.vel.y * 3);
+            telemetry.addData("angular: ", robot.vel.angle);
             telemetry.addData("accx: ", robot.acc.x / 3);
             telemetry.addData("accy: ", robot.acc.y / 3);
-            telemetry.addData("followx", follow_pose.x);
-            telemetry.addData("followy", follow_pose.y);
-            telemetry.addData("distance", follow_pose.distance(path.getLastPoint()));
-            telemetry.addData("passed", path.getLastPoint().passed);
+            telemetry.addData("followx: ", follow_pose.x);
+            telemetry.addData("followy: ", follow_pose.y);
+            telemetry.addData("distance: ", robot.pose.distance(path.getLastPoint()));
+            telemetry.addData("passed: ", path.getLastPoint().passed);
             telemetry.update();
         }
 

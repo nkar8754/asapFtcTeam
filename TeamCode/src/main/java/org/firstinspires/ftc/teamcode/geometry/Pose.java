@@ -3,8 +3,6 @@ package org.firstinspires.ftc.teamcode.geometry;
 public class Pose extends Point {
 
     public double angle = 0.0;
-    public double x = 0.0;
-    public double y = 0.0;
 
     public Pose(double x, double y, double angle) {
         this.x = x;

@@ -30,7 +30,7 @@ public class Path {
 
     ArrayList<PathPoint> points = new ArrayList<>();
 
-    Pose robot_pose = new Pose();
+    public Pose robot_pose = new Pose(0, 0);
 
     double follow_radius = 5;
 
@@ -142,7 +142,7 @@ public class Path {
     }
 
     public void update(Pose new_robot_pose) {
-        robot_pose.copy(new_robot_pose);
+        this.robot_pose = new_robot_pose.clone();
 
         markPassedPoints();
     }
