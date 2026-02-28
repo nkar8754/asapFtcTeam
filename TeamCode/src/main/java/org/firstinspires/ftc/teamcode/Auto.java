@@ -60,9 +60,15 @@ public class Auto extends LinearOpMode {
     private PidController rotator = null;
     private SwerveKinematics swerveController = new SwerveKinematics(234, 304.812);
     class Robot {
+
         public Pose pose = new Pose(0, 0);
         public Pose vel = new Pose();
         public Pose acc = new Pose();
+=======
+        Pose pose = new Pose(0, 0);
+        Pose vel = new Pose();
+        Pose acc = new Pose();
+>>>>>>> 7b15aa7b667d044f546a10228b485c0387be573f
 
         final double DAMP = 0.87;
         final double DAMP_ANGLE = 0.80;
@@ -155,11 +161,20 @@ public class Auto extends LinearOpMode {
         ElapsedTime timer = new ElapsedTime();
 
         Path path = new Path();
+<<<<<<< HEAD
         path.addPoint(new PathPoint(0, 0));
         path.addPoint(new PathPoint(0.4272, 154.3579));
         path.addPoint(new PathPoint(71.0754, 274.5056));
         path.followRadius(10);
         path.constantHeading(-0.9288);
+=======
+        path.addPoint(new PathPoint(0, 31));
+        path.addPoint(new PathPoint(-41, -41));
+        path.addPoint(new PathPoint(0, -41));
+        path.addPoint(new PathPoint(10, 0));
+        path.followRadius(1);
+        path.constantHeading(Math.PI / 2);
+>>>>>>> 7b15aa7b667d044f546a10228b485c0387be573f
 
         Robot robot = new Robot();
 
