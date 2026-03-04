@@ -220,10 +220,12 @@ public class SwerveTeleOp extends LinearOpMode {
                 if (timer.milliseconds() > 0 && timer.milliseconds() <= 1000 && gamepad1.x) {
                     topFlap.setPosition(topFlapKick);
                     bottomFlap.setPosition(bottomFlapStow);
-                    intake.setPower(0);
-                    intakeMotor.setPower(0);
+                    intake.setPower(-1);
+                    intakeMotor.setPower(-1);
                 } else if (timer.milliseconds() > 1000 && timer.milliseconds() <= 1500 && gamepad1.x) {
                     topFlap.setPosition(topFlapStow);
+                    intake.setPower(0);
+                    intakeMotor.setPower(0);
                 } else if (timer.milliseconds() > 1500 && timer.milliseconds() <= 2000 && gamepad1.x) {
                     topFlap.setPosition(topFlapStow);
                     bottomFlap.setPosition(bottomFlapAgitate);
