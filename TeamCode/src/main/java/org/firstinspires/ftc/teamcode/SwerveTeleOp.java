@@ -85,8 +85,8 @@ public class SwerveTeleOp extends LinearOpMode {
     private DcMotor frontRightMotor;
     private DcMotor backRightMotor;
 
-    private DcMotor topShooter;
-    private DcMotor bottomShooter;
+    private DcMotorEx topShooter;
+    private DcMotorEx bottomShooter;
 
     private CRServo frontLeftServo;
     private CRServo backLeftServo;
@@ -153,6 +153,10 @@ public class SwerveTeleOp extends LinearOpMode {
         return Math.atan(tanTheta);
     }
 
+    public static double topFlapKick = 0.55;
+    public static double bottomFlapStow = 0;
+    public static double bottomFlapAgitate = 0.1;
+
     @Override
     public void runOpMode() {
 //        slide1 = hardwareMap.get(DcMotorEx.class, "slide1");
@@ -172,20 +176,22 @@ public class SwerveTeleOp extends LinearOpMode {
 //        wrist = hardwareMap.get(Servo.class, "wrist");
 //        claw = hardwareMap.get(Servo.class, "claw");
 
-        topShooter = hardwareMap.get(DcMotor.class, "topShooter");
-        bottomShooter = hardwareMap.get(DcMotor.class, "bottomShooter");
+        topShooter = hardwareMap.get(DcMotorEx.class, "topShooter");
+        bottomShooter = hardwareMap.get(DcMotorEx.class, "bottomShooter");
         intakeMotor = hardwareMap.get(DcMotor.class, "intakeMotor");
         bottomFlap = hardwareMap.get(Servo.class, "bottomFlap");
         topFlap = hardwareMap.get(Servo.class, "topFlap");
         intake = hardwareMap.get(CRServo.class, "intake");
 
 
-        topShooter.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        topShooter.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         topShooter.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
 
-        bottomShooter.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        bottomShooter.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         bottomShooter.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
 
+        topShooter.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        bottomShooter.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
 
         frontLeftMotor = hardwareMap.get(DcMotorEx.class, "frontLeftMotor");
         backLeftMotor = hardwareMap.get(DcMotorEx.class, "backLeftMotor");
@@ -261,8 +267,8 @@ public class SwerveTeleOp extends LinearOpMode {
             hub.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL);
         }
 
-        double pos = 0.5;   // start in the middle
-
+        topShooter.setVelocity(0);
+        bottomShooter.setVelocity(0);
 
         while (opModeIsActive()) {
 
@@ -278,21 +284,24 @@ public class SwerveTeleOp extends LinearOpMode {
             }
 // LT = reverse
             else if (gamepad1.left_trigger > 0.05) {
+                bottomFlap.setPosition(bottomFlapAgitate);
                 intakePower = -1;
+
             }
             else {
                 intakePower = 0;
+                bottomFlap.setPosition(bottomFlapStow);
             }
 
             intake.setPower(intakePower);
             intakeMotor.setPower(intakePower);
 
             if (gamepad1.dpad_down) {
-                bottomFlap.setPosition(0.5);
+                bottomFlap.setPosition(bottomFlapAgitate);
             } else if (gamepad1.dpad_up) {
-                topFlap.setPosition(0.3);
+                topFlap.setPosition(topFlapKick);
             } else {
-                bottomFlap.setPosition(-0.4);
+                bottomFlap.setPosition(bottomFlapStow);
                 topFlap.setPosition(0.7);
             }
 
@@ -318,6 +327,11 @@ public class SwerveTeleOp extends LinearOpMode {
                 speedMult = 0.6;
             }
 
+            if (gamepad1.a) {
+                currentPosition = new SparkFunOTOS.Pose2D(0, 0, 0);
+                odometry.setPosition(currentPosition);
+            }
+
             double rotationRadians = (odometry.getPosition().h * Math.PI) / 180;
             matrix2d referenceTransform = new matrix2d(new ArrayList<Integer>(Arrays.asList(2, 2)));
             referenceTransform.components = new ArrayList<Double>(Arrays.asList(
@@ -329,7 +343,10 @@ public class SwerveTeleOp extends LinearOpMode {
             velocityWorld.components = new ArrayList<Double>(Arrays.asList(-gamepad1.left_stick_y / 1.5, gamepad1.left_stick_x / 1.5));
             velocityWorld = matrix2d.matrixMultiply(referenceTransform, velocityWorld);
 
-            ArrayList<Double> output = swerveController.getVelocities(velocityWorld.components.get(0), velocityWorld.components.get(1), -gamepad1.right_stick_x / 360);
+            double rot = -gamepad1.right_stick_x / 360;
+            if (Math.abs(rot) < 0.0002) rot = 0.0;
+
+            ArrayList<Double> output = swerveController.getVelocities(velocityWorld.components.get(0), velocityWorld.components.get(1), rot);
             drive(output, speedMult);
 
             telemetry.addData("fr: ", frontRightEncoder.getVoltage() / 3.3);
@@ -338,15 +355,15 @@ public class SwerveTeleOp extends LinearOpMode {
             telemetry.addData("bl: ", backLeftEncoder.getVoltage() / 3.3);
             telemetry.addData("X: ",  -odometry.getPosition().y * 100);
             telemetry.addData("Y: ", odometry.getPosition().x * 100);
-            telemetry.addData("rot: ", (odometry.getPosition().h * Math.PI) / 180);
+            telemetry.addData("rot: ", (odometry.getPosition().h * Math.PI) / 180.0);
             telemetry.update();
 
             if (gamepad1.right_trigger > 0.2) {
-                topShooter.setPower(1);
-                bottomShooter.setPower(1);
+                topShooter.setVelocity(1000);
+                bottomShooter.setVelocity(1000);
             } else {
-                topShooter.setPower(0);
-                bottomShooter.setPower(0);
+                topShooter.setVelocity(0);
+                bottomShooter.setVelocity(0);
             }
 
         }

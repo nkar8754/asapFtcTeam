@@ -36,6 +36,12 @@ public class Auto extends LinearOpMode {
     private CRServo backLeftServo;
     private CRServo frontRightServo;
     private CRServo backRightServo;
+    private DcMotorEx topShooter;
+    private DcMotorEx bottomShooter;
+    private Servo topFlap;
+    private Servo bottomFlap;
+    private CRServo intake;
+    private DcMotor intakeMotor;
 
     public static double kp = 2;
     public static double ki = 0.0;
@@ -65,7 +71,7 @@ public class Auto extends LinearOpMode {
         public Pose vel = new Pose();
         public Pose acc = new Pose();
 
-        final double DAMP = 0.87;
+        final double DAMP = 0.88;
         final double DAMP_ANGLE = 0.80;
 
         public void update(Path path) {
@@ -98,6 +104,13 @@ public class Auto extends LinearOpMode {
 
     @Override
     public void runOpMode() {
+        topShooter = hardwareMap.get(DcMotorEx.class, "topShooter");
+        bottomShooter = hardwareMap.get(DcMotorEx.class, "bottomShooter");
+        intakeMotor = hardwareMap.get(DcMotor.class, "intakeMotor");
+        bottomFlap = hardwareMap.get(Servo.class, "bottomFlap");
+        topFlap = hardwareMap.get(Servo.class, "topFlap");
+        intake = hardwareMap.get(CRServo.class, "intake");
+
         frontLeftMotor = hardwareMap.get(DcMotorEx.class, "frontLeftMotor");
         backLeftMotor = hardwareMap.get(DcMotorEx.class, "backLeftMotor");
         frontRightMotor = hardwareMap.get(DcMotorEx.class, "frontRightMotor");
@@ -149,6 +162,16 @@ public class Auto extends LinearOpMode {
         pidController4.Kp = kp;
         pidController4.Ki = ki;
         pidController4.Kd = kd;
+
+        topShooter.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        topShooter.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
+
+        bottomShooter.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        bottomShooter.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
+
+        topShooter.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        bottomShooter.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+
         //wrist: 1.01
         //slide: 980
         //inc: 1.616
@@ -157,13 +180,19 @@ public class Auto extends LinearOpMode {
         Path path = new Path();
         path.addPoint(new PathPoint(0, 0));
         path.addPoint(new PathPoint(0.4272, 154.3579));
-        path.addPoint(new PathPoint(71.0754, 274.5056));
+        path.addPoint(new PathPoint(30.2734, 215.6067));
         path.followRadius(10);
-        path.constantHeading(-0.9288);
+        path.constantHeading(-0.67);
 
         Robot robot = new Robot();
 
+        topShooter.setVelocity(0);
+        bottomShooter.setVelocity(0);
+
         while (timer.milliseconds() <= 30000 && opModeIsActive()) {//30500) {
+            topShooter.setVelocity(1000);
+            bottomShooter.setVelocity(1000);
+
             double rotationRadians = (odometry.getPosition().h * Math.PI) / 180.0;
             matrix2d referenceTransform = new matrix2d(new ArrayList<Integer>(Arrays.asList(2, 2)));
             referenceTransform.components = new ArrayList<Double>(Arrays.asList(
@@ -185,8 +214,52 @@ public class Auto extends LinearOpMode {
             velocityWorld.components = new ArrayList<Double>(Arrays.asList(robot.vel.y * 4.4, robot.vel.x * 4.4));
             velocityWorld = matrix2d.matrixMultiply(referenceTransform, velocityWorld);
 
-            ArrayList<Double> output = swerveController.getVelocities(velocityWorld.components.get(0), velocityWorld.components.get(1), robot.vel.angle / 22);
+            ArrayList<Double> output = swerveController.getVelocities(velocityWorld.components.get(0), velocityWorld.components.get(1), robot.vel.angle / 25);
             drive(output, 1);
+
+            if (Math.sqrt(robot.vel.x * robot.vel.x + robot.vel.y * robot.vel.y) < 0.01 && timer.milliseconds() > 2000) {
+                topFlap.setPosition(0.3);
+                bottomFlap.setPosition(-0.4);
+                intake.setPower(0);
+                intakeMotor.setPower(0);
+                sleep(500);
+                topFlap.setPosition(0.7);
+
+                sleep(500);
+                topFlap.setPosition(0.7);
+                bottomFlap.setPosition(0.5);
+                intake.setPower(-1);
+                intakeMotor.setPower(-1);
+
+                sleep(3000);
+                topFlap.setPosition(0.3);
+                bottomFlap.setPosition(-0.4);
+                intake.setPower(0);
+                intakeMotor.setPower(0);
+                sleep(500);
+                topFlap.setPosition(0.7);
+
+                sleep(500);
+                topFlap.setPosition(0.7);
+                intake.setPower(-1);
+                intakeMotor.setPower(-1);
+                bottomFlap.setPosition(0.5);
+
+                sleep(3000);
+                topFlap.setPosition(0.3);
+                bottomFlap.setPosition(-0.4);
+                intake.setPower(0);
+                intakeMotor.setPower(0);
+                sleep(500);
+                topFlap.setPosition(0.7);
+
+                break;
+            } else {
+                bottomFlap.setPosition(-0.4);
+                topFlap.setPosition(0.7);
+                intake.setPower(0);
+                intakeMotor.setPower(0);
+            }
 
             telemetry.addData("posx: ", path.robot_pose.x);
             telemetry.addData("posy: ", path.robot_pose.y);
@@ -202,6 +275,9 @@ public class Auto extends LinearOpMode {
             telemetry.addData("passed: ", path.getLastPoint().passed);
             telemetry.update();
         }
+
+        topShooter.setPower(0);
+        bottomShooter.setPower(0);
 
         ArrayList<Double> output = swerveController.getVelocities(0,0, 0);
         drive(output, 1);
