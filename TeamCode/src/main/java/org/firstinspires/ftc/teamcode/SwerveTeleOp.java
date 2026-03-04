@@ -128,6 +128,7 @@ public class SwerveTeleOp extends LinearOpMode {
     }
 
     public static double topFlapKick = 0.55;
+    public static double topFlapStow = 0.7;
     public static double bottomFlapStow = 0;
     public static double bottomFlapAgitate = 0.1;
 
@@ -193,9 +194,9 @@ public class SwerveTeleOp extends LinearOpMode {
         pidController3 = new PidController(kp, ki, kd);
         pidController4 = new PidController(kp, ki, kd);
 
+        ElapsedTime timer = new ElapsedTime();
+
         List<LynxModule> allHubs = hardwareMap.getAll(LynxModule.class);
-
-
 
         for (LynxModule hub : allHubs) {
             hub.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL);
@@ -227,13 +228,34 @@ public class SwerveTeleOp extends LinearOpMode {
             intake.setPower(intakePower);
             intakeMotor.setPower(intakePower);
 
-            if (gamepad1.dpad_down) {
+
+            if (gamepad1.a) {
                 bottomFlap.setPosition(bottomFlapAgitate);
-            } else if (gamepad1.dpad_up) {
+            } else if (gamepad1.y) {
                 topFlap.setPosition(topFlapKick);
-            } else {
+            }  else if (!gamepad1.a && !gamepad1.y) {
+                topFlap.setPosition(topFlapStow);
                 bottomFlap.setPosition(bottomFlapStow);
-                topFlap.setPosition(0.7);
+            }
+
+            if (timer.milliseconds() > 0 && gamepad1.x) {
+                topFlap.setPosition(topFlapKick);
+                bottomFlap.setPosition(bottomFlapStow);
+                intake.setPower(0);
+                intakeMotor.setPower(0);
+            } else if (timer.milliseconds() > 1000 && gamepad1.x) {
+                topFlap.setPosition(topFlapStow);
+            } else if (timer.milliseconds() > 1500 && gamepad1.x) {
+                topFlap.setPosition(topFlapStow);
+                bottomFlap.setPosition(bottomFlapAgitate);
+                intake.setPower(-1);
+                intakeMotor.setPower(-1);
+            } else if (timer.milliseconds() > 2000) {
+                topFlap.setPosition(topFlapStow);
+                bottomFlap.setPosition(bottomFlapStow);
+                intake.setPower(0);
+                intakeMotor.setPower(0);
+                timer = new ElapsedTime();
             }
 
             telemetry.update();
