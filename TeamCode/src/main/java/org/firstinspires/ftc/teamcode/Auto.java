@@ -172,9 +172,6 @@ public class Auto extends LinearOpMode {
         topShooter.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         bottomShooter.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
 
-        //wrist: 1.01
-        //slide: 980
-        //inc: 1.616
         ElapsedTime timer = new ElapsedTime();
 
         Path path = new Path();

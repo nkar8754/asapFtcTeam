@@ -59,27 +59,6 @@ public class SwerveTeleOp extends LinearOpMode {
         double angle;
     }
 
-//    static ArrayList<AnalyzedStone> internalStoneList = new ArrayList<>();
-//    static volatile ArrayList<AnalyzedStone> clientStoneList = new ArrayList<>();
-//    private DcMotor slide1;
-//    private DcMotor slide2;
-//    private CRServo extension;
-//    private CRServo inclination;
-//    private Servo wrist;
-//    private Servo claw;
-
-//    private int slidePos = 0;
-//    private double clawAngle = -0.37;
-//    private double inclinationAngle = 2;
-//    private double previousInclination = 2;
-//    private int inclinationWrap = 1;
-//    private double targetExtension = 0.04;
-//    private double previousExtension = 0.04;
-//    private int extensionWrap = 0;
-//    private double wristAngle = 0.83;
-//    private double readExtension = 0;
-//    boolean grabbing = false;
-
     private DcMotor frontLeftMotor;
     private DcMotor backLeftMotor;
     private DcMotor frontRightMotor;
@@ -117,16 +96,11 @@ public class SwerveTeleOp extends LinearOpMode {
     AnalogInput backRightEncoder;
     AnalogInput frontLeftEncoder;
     AnalogInput frontRightEncoder;
-//    AnalogInput extensionEncoder;
-//    AnalogInput inclinationEncoder;
 
     private PidController pidController1;
     private PidController pidController2;
     private PidController pidController3;
     private PidController pidController4;
-//    private GeneralPid inclinationController;
-//    private GeneralPid extensionController;
-    //private GeneralPid lateralController;
 
     private SwerveKinematics swerveController = new SwerveKinematics(234, 304.812);
 
@@ -159,22 +133,6 @@ public class SwerveTeleOp extends LinearOpMode {
 
     @Override
     public void runOpMode() {
-//        slide1 = hardwareMap.get(DcMotorEx.class, "slide1");
-//        slide2 = hardwareMap.get(DcMotorEx.class, "slide2");
-//        slide1.setTargetPosition(slidePos);
-//        slide2.setTargetPosition(slidePos);
-//        slide1.setPower(1);
-//        slide2.setPower(1);
-//        slide2.setDirection(DcMotorSimple.Direction.REVERSE);
-//        slide1.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-//        slide2.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-//        slide1.setMode(DcMotor.RunMode.RUN_TO_POSITION);5
-//        slide2.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-//
-//        extension = hardwareMap.get(CRServo.class, "extension");
-//        inclination = hardwareMap.get(CRServo.class, "inclination");
-//        wrist = hardwareMap.get(Servo.class, "wrist");
-//        claw = hardwareMap.get(Servo.class, "claw");
 
         topShooter = hardwareMap.get(DcMotorEx.class, "topShooter");
         bottomShooter = hardwareMap.get(DcMotorEx.class, "bottomShooter");
@@ -207,31 +165,10 @@ public class SwerveTeleOp extends LinearOpMode {
         backRightEncoder = hardwareMap.get(AnalogInput.class, "backRightEncoder");
         frontLeftEncoder = hardwareMap.get(AnalogInput.class, "frontLeftEncoder");
         frontRightEncoder = hardwareMap.get(AnalogInput.class, "frontRightEncoder");
-//        inclinationEncoder = hardwareMap.get(AnalogInput.class, "inclinationEncoder");
-//        extensionEncoder = hardwareMap.get(AnalogInput.class, "extenderEncoder");
 
         telemetry = new MultipleTelemetry(FtcDashboard.getInstance().getTelemetry(),telemetry);
         telemetry.addData("Status", "Initialized");
         telemetry.update();
-
-        //StoneOrientationAnalysisPipeline  pipeline = new StoneOrientationAnalysisPipeline();
-
-        //int cameraMonitorViewId = hardwareMap.appContext.getResources().getIdentifier("cameraMonitorViewId", "id", hardwareMap.appContext.getPackageName());
-        //camera = OpenCvCameraFactory.getInstance().createWebcam(hardwareMap.get(WebcamName.class, "Webcam 1"), cameraMonitorViewId);
-        //camera.setPipeline(pipeline);
-//        camera.openCameraDeviceAsync(new OpenCvCamera.AsyncCameraOpenListener() {
-//            @Override
-//            public void onOpened() {
-//                camera.startStreaming(320, 240, OpenCvCameraRotation.UPRIGHT);
-//            }
-//
-//            @Override
-//            public void onError(int errorCode) {
-//                /*
-//                 * This will be called if the camera could not be opened
-//                 */
-//            }
-//        });
 
         odometry = hardwareMap.get(SparkFunOTOS.class, "sensor_otos");
         odometry.setLinearUnit(DistanceUnit.METER);
@@ -255,9 +192,6 @@ public class SwerveTeleOp extends LinearOpMode {
         pidController2 = new PidController(kp, ki, kd);
         pidController3 = new PidController(kp, ki, kd);
         pidController4 = new PidController(kp, ki, kd);
-//        inclinationController = new GeneralPid(2, 0, 0);
-//        extensionController = new GeneralPid(lkp, lki, lkd);
-        //lateralController = new GeneralPid(0.5, 0, 1);
 
         List<LynxModule> allHubs = hardwareMap.getAll(LynxModule.class);
 
@@ -279,18 +213,15 @@ public class SwerveTeleOp extends LinearOpMode {
             double intakePower = 0;
 
 // RB = intake
-            if (gamepad1.left_bumper) {
-                intakePower = 1;
-            }
-// LT = reverse
-            else if (gamepad1.left_trigger > 0.05) {
+            if (gamepad1.left_trigger > 0.05) {
                 bottomFlap.setPosition(bottomFlapAgitate);
                 intakePower = -1;
-
+            }
+            else if (gamepad1.left_bumper) {
+                intakePower = 1;
             }
             else {
                 intakePower = 0;
-                bottomFlap.setPosition(bottomFlapStow);
             }
 
             intake.setPower(intakePower);
@@ -324,7 +255,7 @@ public class SwerveTeleOp extends LinearOpMode {
             double speedMult = 1;
 
             if (gamepad1.right_bumper ) {
-                speedMult = 0.6;
+                speedMult = 0.4;
             }
 
             if (gamepad1.a) {
@@ -358,6 +289,7 @@ public class SwerveTeleOp extends LinearOpMode {
             telemetry.addData("rot: ", (odometry.getPosition().h * Math.PI) / 180.0);
             telemetry.update();
 
+// SHOOT
             if (gamepad1.right_trigger > 0.2) {
                 topShooter.setVelocity(1000);
                 bottomShooter.setVelocity(1000);
