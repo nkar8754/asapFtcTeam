@@ -250,11 +250,9 @@ public class SwerveTeleOp extends LinearOpMode {
                 bottomFlap.setPosition(bottomFlapAgitate);
                 intake.setPower(-1);
                 intakeMotor.setPower(-1);
-            } else if (timer.milliseconds() > 2000) {
-                topFlap.setPosition(topFlapStow);
-                bottomFlap.setPosition(bottomFlapStow);
-                intake.setPower(0);
-                intakeMotor.setPower(0);
+            }
+
+            if (timer.milliseconds() > 2000) {
                 timer = new ElapsedTime();
             }
 
