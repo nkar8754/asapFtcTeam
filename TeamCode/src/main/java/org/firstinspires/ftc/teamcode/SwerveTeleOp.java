@@ -214,46 +214,50 @@ public class SwerveTeleOp extends LinearOpMode {
             double intakePower = 0;
 
 // RB = intake
-            if (gamepad1.left_trigger > 0.05) {
-                bottomFlap.setPosition(bottomFlapAgitate);
-                intakePower = -1;
-            }
-            else if (gamepad1.left_bumper) {
-                intakePower = 1;
-            }
-            else {
-                intakePower = 0;
-            }
 
-            intake.setPower(intakePower);
-            intakeMotor.setPower(intakePower);
-
-
-            if (gamepad1.a) {
-                bottomFlap.setPosition(bottomFlapAgitate);
-            } else if (gamepad1.y) {
-                topFlap.setPosition(topFlapKick);
-            }  else if (!gamepad1.a && !gamepad1.y) {
-                topFlap.setPosition(topFlapStow);
-                bottomFlap.setPosition(bottomFlapStow);
-            }
-
-            if (timer.milliseconds() > 0 && gamepad1.x) {
-                topFlap.setPosition(topFlapKick);
-                bottomFlap.setPosition(bottomFlapStow);
-                intake.setPower(0);
-                intakeMotor.setPower(0);
-            } else if (timer.milliseconds() > 1000 && gamepad1.x) {
-                topFlap.setPosition(topFlapStow);
-            } else if (timer.milliseconds() > 1500 && gamepad1.x) {
-                topFlap.setPosition(topFlapStow);
-                bottomFlap.setPosition(bottomFlapAgitate);
-                intake.setPower(-1);
-                intakeMotor.setPower(-1);
+            if (gamepad1.x) {
+                if (timer.milliseconds() > 0 && gamepad1.x) {
+                    topFlap.setPosition(topFlapKick);
+                    bottomFlap.setPosition(bottomFlapStow);
+                    intake.setPower(0);
+                    intakeMotor.setPower(0);
+                } else if (timer.milliseconds() > 1000 && gamepad1.x) {
+                    topFlap.setPosition(topFlapStow);
+                } else if (timer.milliseconds() > 1500 && gamepad1.x) {
+                    topFlap.setPosition(topFlapStow);
+                    bottomFlap.setPosition(bottomFlapAgitate);
+                    intake.setPower(-1);
+                    intakeMotor.setPower(-1);
+                }
             }
 
             if (timer.milliseconds() > 2000) {
                 timer = new ElapsedTime();
+            }
+
+            if (!gamepad1.x) {
+                if (gamepad1.a) {
+                    bottomFlap.setPosition(bottomFlapAgitate);
+                } else if (gamepad1.y) {
+                    topFlap.setPosition(topFlapKick);
+                }  else  {
+                    topFlap.setPosition(topFlapStow);
+                    bottomFlap.setPosition(bottomFlapStow);
+                }
+
+                if (gamepad1.left_trigger > 0.05) {
+                    bottomFlap.setPosition(bottomFlapAgitate);
+                    intakePower = -1;
+                }
+                else if (gamepad1.left_bumper) {
+                    intakePower = 1;
+                }
+                else {
+                    intakePower = 0;
+                }
+
+                intake.setPower(intakePower);
+                intakeMotor.setPower(intakePower);
             }
 
             telemetry.update();
