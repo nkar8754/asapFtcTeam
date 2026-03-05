@@ -84,9 +84,9 @@ public class SwerveTeleOp extends LinearOpMode {
     public static double kp = 2;
     public static double ki = 0.0;
     public static double kd = 1;
-    public static double lkp = 2.0;
+    public static double lkp = 0.005;
     public static double lki = 0.0;
-    public static double lkd = 0.0;
+    public static double lkd = 0;
 
     public static double offsetFR = 90;
     public static double offsetBR = -15;
@@ -102,6 +102,8 @@ public class SwerveTeleOp extends LinearOpMode {
     private PidController pidController2;
     private PidController pidController3;
     private PidController pidController4;
+
+    private PidControllerGeneral pidController;
 
     private SwerveKinematics swerveController = new SwerveKinematics(234, 304.812);
 
@@ -190,6 +192,7 @@ public class SwerveTeleOp extends LinearOpMode {
 
         waitForStart();
 
+        pidController = new PidControllerGeneral(lkp, lki, lkd);
         pidController1 = new PidController(kp, ki, kd);
         pidController2 = new PidController(kp, ki, kd);
         pidController3 = new PidController(kp, ki, kd);
@@ -265,7 +268,9 @@ public class SwerveTeleOp extends LinearOpMode {
 
             telemetry.update();
 
-
+            pidController.Kp = lkp;
+            pidController.Ki = lki;
+            pidController.Kd = lkd;
             pidController1.Kp = kp;
             pidController1.Ki = ki;
             pidController1.Kd = kd;
@@ -286,7 +291,7 @@ public class SwerveTeleOp extends LinearOpMode {
             }
 
             if (gamepad1.a) {
-                currentPosition = new SparkFunOTOS.Pose2D(0, 0, 0);
+                currentPosition = new SparkFunOTOS.Pose2D(odometry.getPosition().x, odometry.getPosition().y, 0);
                 odometry.setPosition(currentPosition);
             }
 
@@ -314,17 +319,20 @@ public class SwerveTeleOp extends LinearOpMode {
             telemetry.addData("X: ",  -odometry.getPosition().y * 100);
             telemetry.addData("Y: ", odometry.getPosition().x * 100);
             telemetry.addData("rot: ", (odometry.getPosition().h * Math.PI) / 180.0);
-            telemetry.update();
+            telemetry.addData("shooterVelocity: ", topShooter.getVelocity());
 
 // SHOOT
             if (gamepad1.right_trigger > 0.2) {
-                topShooter.setVelocity(1000);
-                bottomShooter.setVelocity(1000);
+                double power = pidController.calculate(1100, topShooter.getVelocity());
+                topShooter.setPower(power);
+                bottomShooter.setPower(power);
+                telemetry.addData("shooterPower: ", power);
             } else {
-                topShooter.setVelocity(0);
-                bottomShooter.setVelocity(0);
+                topShooter.setPower(0);
+                bottomShooter.setPower(0);
             }
 
+            telemetry.update();
         }
     }
 

@@ -46,6 +46,9 @@ public class Auto extends LinearOpMode {
     public static double kp = 2;
     public static double ki = 0.0;
     public static double kd = 1;
+    public static double lkp = 0.005;
+    public static double lki = 0.0;
+    public static double lkd = 0;
 
     public static double offsetFR = 90;
     public static double offsetBR = -15;
@@ -53,6 +56,12 @@ public class Auto extends LinearOpMode {
     public static double offsetBL = 155;
 
     public static double svP = 0;
+
+    private ElapsedTime flapTimer = new ElapsedTime();
+    private ElapsedTime shootTimer = new ElapsedTime();
+    private boolean flapped = false;
+    private boolean staged = false;
+    private int ballsShot = 0;
 
     AnalogInput backLeftEncoder;
     AnalogInput backRightEncoder;
@@ -64,6 +73,7 @@ public class Auto extends LinearOpMode {
     private PidController pidController3 = null;
     private PidController pidController4 = null;
     private PidController rotator = null;
+    private PidControllerGeneral pidController;
     private SwerveKinematics swerveController = new SwerveKinematics(234, 304.812);
 
     class Robot {
@@ -71,8 +81,8 @@ public class Auto extends LinearOpMode {
         public Pose vel = new Pose();
         public Pose acc = new Pose();
 
-        final double DAMP = 0.88;
-        final double DAMP_ANGLE = 0.80;
+        final double DAMP = 0.85;
+        final double DAMP_ANGLE = 0.67;
 
         public void update(Path path) {
             double d = Math.min(1, Math.pow(pose.distance(path.getLastPoint()) / 160, 2));
@@ -142,6 +152,7 @@ public class Auto extends LinearOpMode {
 
         waitForStart();
 
+        pidController = new PidControllerGeneral(lkp, lki, lkd);
         pidController1 = new PidController(kp, ki, kd);
         pidController2 = new PidController(kp, ki, kd);
         pidController3 = new PidController(kp, ki, kd);
@@ -176,20 +187,26 @@ public class Auto extends LinearOpMode {
 
         Path path = new Path();
         path.addPoint(new PathPoint(0, 0));
-        path.addPoint(new PathPoint(0.4272, 154.3579));
-        path.addPoint(new PathPoint(30.2734, 215.6067));
+        path.addPoint(new PathPoint(0.4272, 184.3579));
+        path.addPoint(new PathPoint(66.9556, 266.6321));
         path.followRadius(10);
-        path.constantHeading(-0.67);
+        path.constantHeading(-0.78);
 
         Robot robot = new Robot();
+
+        double topFlapKick = 0.55;
+        double topFlapStow = 0.7;
+        double bottomFlapStow = 0;
+        double bottomFlapAgitate = 0.1;
 
         topShooter.setVelocity(0);
         bottomShooter.setVelocity(0);
 
-        while (timer.milliseconds() <= 30000 && opModeIsActive()) {//30500) {
-            topShooter.setVelocity(1000);
-            bottomShooter.setVelocity(1000);
+        ballsShot = 0;
+        flapped = false;
+        staged = false;
 
+        while (timer.milliseconds() <= 30000 && opModeIsActive() && ballsShot < 3) {//30500) {
             double rotationRadians = (odometry.getPosition().h * Math.PI) / 180.0;
             matrix2d referenceTransform = new matrix2d(new ArrayList<Integer>(Arrays.asList(2, 2)));
             referenceTransform.components = new ArrayList<Double>(Arrays.asList(
@@ -208,47 +225,72 @@ public class Auto extends LinearOpMode {
             robot.acc.angle = Math.max(Math.min((follow_pose.angle-robot.pose.angle), 0.01), -0.01);
 
             matrix2d velocityWorld = new matrix2d(new ArrayList<Integer>(Arrays.asList(1, 2)));
-            velocityWorld.components = new ArrayList<Double>(Arrays.asList(robot.vel.y * 4.4, robot.vel.x * 4.4));
+            velocityWorld.components = new ArrayList<Double>(Arrays.asList(robot.vel.y * 5, robot.vel.x * 5));
             velocityWorld = matrix2d.matrixMultiply(referenceTransform, velocityWorld);
 
-            ArrayList<Double> output = swerveController.getVelocities(velocityWorld.components.get(0), velocityWorld.components.get(1), robot.vel.angle / 25);
+            ArrayList<Double> output = swerveController.getVelocities(velocityWorld.components.get(0), velocityWorld.components.get(1), robot.vel.angle / 5);
             drive(output, 1);
 
             if (Math.sqrt(robot.vel.x * robot.vel.x + robot.vel.y * robot.vel.y) < 0.01 && timer.milliseconds() > 2000) {
-                topFlap.setPosition(0.3);
-                bottomFlap.setPosition(-0.4);
-                intake.setPower(0);
-                intakeMotor.setPower(0);
-                sleep(500);
-                topFlap.setPosition(0.7);
+                double velocity = topShooter.getVelocity();
+                double power = pidController.calculate(1100, velocity);
+                topShooter.setPower(power);
+                bottomShooter.setPower(power);
+                telemetry.addData("power: ", power);
+                telemetry.addData("velocity: ", velocity);
 
-                sleep(500);
-                topFlap.setPosition(0.7);
-                bottomFlap.setPosition(0.5);
-                intake.setPower(-1);
-                intakeMotor.setPower(-1);
+                if (!staged && !flapped && ballsShot < 3) {
+                    timer.reset();
+                    flapped = true;
+                }
 
-                sleep(3000);
-                topFlap.setPosition(0.3);
-                bottomFlap.setPosition(-0.4);
-                intake.setPower(0);
-                intakeMotor.setPower(0);
-                sleep(500);
-                topFlap.setPosition(0.7);
+                if (!staged && ballsShot < 3 && timer.milliseconds() >= 3000) {
+                    topFlap.setPosition(topFlapKick);
+                    bottomFlap.setPosition(bottomFlapStow);
+                    intake.setPower(-0.5);
+                    intakeMotor.setPower(-0.5);
+                    shootTimer.reset();
+                    staged = true;
+                }
 
-                sleep(500);
-                topFlap.setPosition(0.7);
-                intake.setPower(-1);
-                intakeMotor.setPower(-1);
-                bottomFlap.setPosition(0.5);
-
-                sleep(3000);
-                topFlap.setPosition(0.3);
-                bottomFlap.setPosition(-0.4);
-                intake.setPower(0);
-                intakeMotor.setPower(0);
-                sleep(500);
-                topFlap.setPosition(0.7);
+                if (staged && shootTimer.milliseconds() > 500) {
+                    topFlap.setPosition(topFlapStow);
+                    staged = false;
+                    flapped = false;
+                    ballsShot++;
+                }
+//
+//                sleep(3000);
+//
+//
+//
+//                sleep(500);
+//                topFlap.setPosition(topFlapStow);
+//                bottomFlap.setPosition(bottomFlapAgitate);
+//                intake.setPower(-1);
+//                intakeMotor.setPower(-1);
+//
+//                sleep(1000);
+//                topFlap.setPosition(topFlapKick);
+//                bottomFlap.setPosition(bottomFlapStow);
+//                intake.setPower(-0.5);
+//                intakeMotor.setPower(-0.5);
+//                sleep(500);
+//                topFlap.setPosition(topFlapStow);
+//
+//                sleep(500);
+//                topFlap.setPosition(topFlapStow);
+//                intake.setPower(-1);
+//                intakeMotor.setPower(-1);
+//                bottomFlap.setPosition(bottomFlapAgitate);
+//
+//                sleep(1000);
+//                topFlap.setPosition(topFlapKick);
+//                bottomFlap.setPosition(bottomFlapStow);
+//                intake.setPower(-0.5);
+//                intakeMotor.setPower(-0.5);
+//                sleep(500);
+//                topFlap.setPosition(0.7);
 
                 break;
             } else {
@@ -270,6 +312,146 @@ public class Auto extends LinearOpMode {
             telemetry.addData("followy: ", follow_pose.y);
             telemetry.addData("distance: ", robot.pose.distance(path.getLastPoint()));
             telemetry.addData("passed: ", path.getLastPoint().passed);
+            telemetry.addLine("first while");
+            telemetry.addData("ball shot: ", ballsShot);
+            telemetry.addData("flapped: ", flapped);
+            telemetry.addData("staged: ", staged);
+            telemetry.update();
+        }
+
+        topShooter.setVelocity(0);
+        bottomShooter.setVelocity(0);
+
+        path = null;
+        path = new Path();
+        path.addPoint(new PathPoint(66.9556, 266.6321));
+        path.addPoint(new PathPoint(27.4658, 195.4651));
+        path.followRadius(10);
+        path.constantHeading(-Math.PI / 2.0);
+
+        robot = null;
+        robot = new Robot();
+
+        ElapsedTime timer2 = new ElapsedTime();
+
+        while (timer.milliseconds() <= 30000 && opModeIsActive()) {//30500) {
+            double velocity = topShooter.getVelocity();
+            double power = pidController.calculate(1100, velocity);
+            topShooter.setPower(power);
+            bottomShooter.setPower(power);
+
+            double rotationRadians = (odometry.getPosition().h * Math.PI) / 180.0;
+            matrix2d referenceTransform = new matrix2d(new ArrayList<Integer>(Arrays.asList(2, 2)));
+            referenceTransform.components = new ArrayList<Double>(Arrays.asList(
+                    Math.cos(rotationRadians), -Math.sin(rotationRadians),
+                    Math.sin(rotationRadians), Math.cos(rotationRadians)
+            ));
+
+            robot.update(path);
+            path.update(robot.pose);
+
+            Pose follow_pose = path.getFollowPose();
+            Circle followCircle = path.getFollowCircle();
+
+            robot.acc.x = Math.cos(robot.pose.angleTo(follow_pose));
+            robot.acc.y = Math.sin(robot.pose.angleTo(follow_pose));
+            robot.acc.angle = Math.max(Math.min((follow_pose.angle-robot.pose.angle), 0.01), -0.01);
+
+            matrix2d velocityWorld = new matrix2d(new ArrayList<Integer>(Arrays.asList(1, 2)));
+            velocityWorld.components = new ArrayList<Double>(Arrays.asList(robot.vel.y * 4.9, robot.vel.x * 4.9));
+            velocityWorld = matrix2d.matrixMultiply(referenceTransform, velocityWorld);
+
+            ArrayList<Double> output = swerveController.getVelocities(velocityWorld.components.get(0), velocityWorld.components.get(1), robot.vel.angle / 15);
+            drive(output, 1);
+
+            if (Math.sqrt(robot.vel.x * robot.vel.x + robot.vel.y * robot.vel.y) < 0.01 && timer2.milliseconds() > 2000) {
+                break;
+            }
+
+            telemetry.addData("posx: ", path.robot_pose.x);
+            telemetry.addData("posy: ", path.robot_pose.y);
+            telemetry.addData("angle: ", (odometry.getPosition().h * Math.PI) / 180.0);
+            telemetry.addData("velx: ", robot.vel.x * 3);
+            telemetry.addData("vely: ", robot.vel.y * 3);
+            telemetry.addData("angular: ", robot.vel.angle);
+            telemetry.addData("accx: ", robot.acc.x / 3);
+            telemetry.addData("accy: ", robot.acc.y / 3);
+            telemetry.addData("followx: ", follow_pose.x);
+            telemetry.addData("followy: ", follow_pose.y);
+            telemetry.addData("distance: ", robot.pose.distance(path.getLastPoint()));
+            telemetry.addData("passed: ", path.getLastPoint().passed);
+            telemetry.addData("power: ", power);
+            telemetry.addData("velocity: ", velocity);
+            telemetry.addLine("second while");
+            telemetry.update();
+        }
+
+        topFlap.setPosition(topFlapStow);
+        intake.setPower(-1);
+        intakeMotor.setPower(-1);
+        bottomFlap.setPosition(bottomFlapAgitate);
+
+        path = null;
+        path = new Path();
+        path.addPoint(new PathPoint(27.4658, 195.4651));
+        path.addPoint(new PathPoint(101.7761, 198.3337));
+        path.followRadius(10);
+        path.constantHeading(-Math.PI / 2.0);
+
+        robot = null;
+        robot = new Robot();
+
+        ElapsedTime timer3 = new ElapsedTime();
+
+        while (timer.milliseconds() <= 30000 && opModeIsActive()) {//30500) {
+            double velocity = topShooter.getVelocity();
+            double power = pidController.calculate(1100, velocity);
+            topShooter.setPower(power);
+            bottomShooter.setPower(power);
+
+            double rotationRadians = (odometry.getPosition().h * Math.PI) / 180.0;
+            matrix2d referenceTransform = new matrix2d(new ArrayList<Integer>(Arrays.asList(2, 2)));
+            referenceTransform.components = new ArrayList<Double>(Arrays.asList(
+                    Math.cos(rotationRadians), -Math.sin(rotationRadians),
+                    Math.sin(rotationRadians), Math.cos(rotationRadians)
+            ));
+
+            robot.update(path);
+            path.update(robot.pose);
+
+            Pose follow_pose = path.getFollowPose();
+            Circle followCircle = path.getFollowCircle();
+
+            robot.acc.x = Math.cos(robot.pose.angleTo(follow_pose));
+            robot.acc.y = Math.sin(robot.pose.angleTo(follow_pose));
+            robot.acc.angle = Math.max(Math.min((follow_pose.angle-robot.pose.angle), 0.01), -0.01);
+
+            matrix2d velocityWorld = new matrix2d(new ArrayList<Integer>(Arrays.asList(1, 2)));
+            velocityWorld.components = new ArrayList<Double>(Arrays.asList(robot.vel.y * 4.5, robot.vel.x * 4.5));
+            velocityWorld = matrix2d.matrixMultiply(referenceTransform, velocityWorld);
+
+            ArrayList<Double> output = swerveController.getVelocities(velocityWorld.components.get(0), velocityWorld.components.get(1), robot.vel.angle / 15);
+            drive(output, 1);
+
+            if (Math.sqrt(robot.vel.x * robot.vel.x + robot.vel.y * robot.vel.y) < 0.01 && timer3.milliseconds() > 2000) {
+                break;
+            }
+
+            telemetry.addData("posx: ", path.robot_pose.x);
+            telemetry.addData("posy: ", path.robot_pose.y);
+            telemetry.addData("angle: ", (odometry.getPosition().h * Math.PI) / 180.0);
+            telemetry.addData("velx: ", robot.vel.x * 3);
+            telemetry.addData("vely: ", robot.vel.y * 3);
+            telemetry.addData("angular: ", robot.vel.angle);
+            telemetry.addData("accx: ", robot.acc.x / 3);
+            telemetry.addData("accy: ", robot.acc.y / 3);
+            telemetry.addData("followx: ", follow_pose.x);
+            telemetry.addData("followy: ", follow_pose.y);
+            telemetry.addData("distance: ", robot.pose.distance(path.getLastPoint()));
+            telemetry.addData("passed: ", path.getLastPoint().passed);
+            telemetry.addData("power: ", power);
+            telemetry.addData("velocity: ", velocity);
+            telemetry.addLine("third while");
             telemetry.update();
         }
 
