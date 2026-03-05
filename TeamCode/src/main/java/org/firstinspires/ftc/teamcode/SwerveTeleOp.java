@@ -287,7 +287,7 @@ public class SwerveTeleOp extends LinearOpMode {
             double speedMult = 1;
 
             if (gamepad1.right_bumper ) {
-                speedMult = 0.4;
+                speedMult = 0.5;
             }
 
             if (gamepad1.a) {
