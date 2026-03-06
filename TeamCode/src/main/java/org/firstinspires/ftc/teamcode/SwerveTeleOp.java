@@ -104,10 +104,10 @@ public class SwerveTeleOp extends LinearOpMode {
     AnalogInput hoodEncoder;
 
     private PidControllerGeneral hoodPID;
-    private PidController pidController1;
-    private PidController pidController2;
-    private PidController pidController3;
-    private PidController pidController4;
+    private PidControllerOld pidController1;
+    private PidControllerOld pidController2;
+    private PidControllerOld pidController3;
+    private PidControllerOld pidController4;
 
     private PidControllerGeneral pidController;
 
@@ -143,7 +143,7 @@ public class SwerveTeleOp extends LinearOpMode {
 
     @Override
     public void runOpMode() {
-
+        ElapsedTime loopTimer = new ElapsedTime();
         topShooter = hardwareMap.get(DcMotorEx.class, "topShooter");
         bottomShooter = hardwareMap.get(DcMotorEx.class, "bottomShooter");
         intakeMotor = hardwareMap.get(DcMotor.class, "intakeMotor");
@@ -202,10 +202,10 @@ public class SwerveTeleOp extends LinearOpMode {
         waitForStart();
 
         pidController = new PidControllerGeneral(lkp, lki, lkd);
-        pidController1 = new PidController(kp, ki, kd);
-        pidController2 = new PidController(kp, ki, kd);
-        pidController3 = new PidController(kp, ki, kd);
-        pidController4 = new PidController(kp, ki, kd);
+        pidController1 = new PidControllerOld(kp, ki, kd);
+        pidController2 = new PidControllerOld(kp, ki, kd);
+        pidController3 = new PidControllerOld(kp, ki, kd);
+        pidController4 = new PidControllerOld(kp, ki, kd);
         hoodPID = new PidControllerGeneral(hkp, 0, hkd);
 
         ElapsedTime timer = new ElapsedTime();
@@ -223,10 +223,13 @@ public class SwerveTeleOp extends LinearOpMode {
         double trueHoodAngle = 0.0;
 
         while (opModeIsActive()) {
+            loopTimer.reset();
 
             for (LynxModule hub : allHubs) {
                 hub.clearBulkCache();
             }
+
+            SparkFunOTOS.Pose2D drivePos = odometry.getPosition();
 
             double intakePower = 0;
             double hoodAngle = (hoodEncoder.getVoltage() / 3.3) * 2 * Math.PI;
@@ -315,18 +318,18 @@ public class SwerveTeleOp extends LinearOpMode {
             }
 
             if (gamepad1.a) {
-                SparkFunOTOS.Pose2D pose = odometry.getPosition();
+                SparkFunOTOS.Pose2D pose = drivePos;
                 pose.h = 0;
                 odometry.setPosition(pose);
             }
 
-            double shootingAngle = -getLaunchAngle(odometry.getPosition().x, odometry.getPosition().y, launchVelocity) * (136.0 / 24.0) + offset;
+            double shootingAngle = -getLaunchAngle(drivePos.x, drivePos.y, launchVelocity) * (136.0 / 24.0) + offset;
             shootingAngle = Math.max(Math.min(shootingAngle, 3.57), 1.0);
             if (shootingAngle != shootingAngle) shootingAngle = 1.0;
             double hoodPower = -2.0 * hoodPID.calculate(shootingAngle / (2 * Math.PI), (trueHoodAngle + hoodAngle) / (2 * Math.PI));
             hood.setPower(hoodPower);
 
-            double rotationRadians = (odometry.getPosition().h * Math.PI) / 180;
+            double rotationRadians = (drivePos.h * Math.PI) / 180;
             matrix2d referenceTransform = new matrix2d(new ArrayList<Integer>(Arrays.asList(2, 2)));
             referenceTransform.components = new ArrayList<Double>(Arrays.asList(
                     Math.cos(rotationRadians), -Math.sin(rotationRadians),
@@ -347,10 +350,10 @@ public class SwerveTeleOp extends LinearOpMode {
             telemetry.addData("br: ", backRightEncoder.getVoltage() / 3.3);
             telemetry.addData("fl: ", frontLeftEncoder.getVoltage() / 3.3);
             telemetry.addData("bl: ", backLeftEncoder.getVoltage() / 3.3);
-            telemetry.addData("X: ",  -odometry.getPosition().y * 100);
-            telemetry.addData("Y: ", odometry.getPosition().x * 100);
-            telemetry.addData("rot: ", (odometry.getPosition().h * Math.PI) / 180.0);
-            telemetry.addData("hood: ", -(getLaunchAngle(odometry.getPosition().x, odometry.getPosition().y, launchVelocity)) * (136.0 / 24.0));
+            telemetry.addData("X: ",  -drivePos.y * 100);
+            telemetry.addData("Y: ", drivePos.x * 100);
+            telemetry.addData("rot: ", (drivePos.h * Math.PI) / 180.0);
+            telemetry.addData("hood: ", -(getLaunchAngle(drivePos.x, drivePos.y, launchVelocity)) * (136.0 / 24.0));
             telemetry.addData("hoodPower: ", hoodPower);
             telemetry.addData("shooterVelocity: ", topShooter.getVelocity());
 
@@ -365,6 +368,7 @@ public class SwerveTeleOp extends LinearOpMode {
                 bottomShooter.setPower(0);
             }
 
+            telemetry.addData("Looptime: ", loopTimer.milliseconds());
             telemetry.update();
 
             previousHoodAngle = hoodAngle;
