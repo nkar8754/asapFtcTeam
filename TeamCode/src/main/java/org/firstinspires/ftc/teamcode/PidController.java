@@ -2,7 +2,9 @@
 package org.firstinspires.ftc.teamcode;
 
 
-public class PidController{
+import com.qualcomm.robotcore.util.ElapsedTime;
+
+public class PidController {
 
      private double integral = 0;
      public double Kp = 0;
@@ -10,7 +12,7 @@ public class PidController{
      public double Kd = 0;
 
      private double lastError = 0;
-
+     ElapsedTime timer = new ElapsedTime();
 
      public PidController(double p, double i, double d)
      {
@@ -21,8 +23,8 @@ public class PidController{
 
           this.lastError = 0;
      }
-     
-     double clamp(double x, double min, double max) { 
+
+     double clamp(double x, double min, double max) {
           return Math.min(Math.max(x, min), max);
      }
 
@@ -43,9 +45,10 @@ public class PidController{
           double error = targetState - currentState;
           error = angleWrap(error);
           integral += error * Ki;
-          double derivative = (error - lastError) * Kd;
+          double derivative = ((error - lastError) / timer.milliseconds()) * Kd;
           lastError = error;
 
+          timer = new ElapsedTime();
           return error * Kp + derivative + integral;
      }
 }

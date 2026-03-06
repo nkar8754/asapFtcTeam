@@ -2,6 +2,8 @@
 package org.firstinspires.ftc.teamcode;
 
 
+import com.qualcomm.robotcore.util.ElapsedTime;
+
 public class PidControllerGeneral {
 
      private double integral = 0;
@@ -10,7 +12,7 @@ public class PidControllerGeneral {
      public double Kd = 0;
 
      private double lastError = 0;
-
+     ElapsedTime timer = new ElapsedTime();
 
      public PidControllerGeneral(double p, double i, double d)
      {
@@ -30,9 +32,10 @@ public class PidControllerGeneral {
      {
           double error = targetState - currentState;
           integral += error * Ki;
-          double derivative = (error - lastError) * Kd;
+          double derivative = ((error - lastError) / timer.milliseconds()) * Kd;
           lastError = error;
 
+          timer = new ElapsedTime();
           return error * Kp + derivative + integral;
      }
 }
