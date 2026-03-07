@@ -95,7 +95,7 @@ public class SwerveTeleOp extends LinearOpMode {
     public static double offsetBR = -15;
     public static double offsetFL = 260;
     public static double offsetBL = 155;
-    public static double offset = 8.2;
+    public static double offset = 9.2;
 
     AnalogInput backLeftEncoder;
     AnalogInput backRightEncoder;
@@ -124,7 +124,7 @@ public class SwerveTeleOp extends LinearOpMode {
     }
 
     private double getLaunchAngle(double posX, double posY, double v) {
-        double D = Math.sqrt(Math.pow(110 / 100 - posX, 2) + Math.pow (17.9 / 100 - posY, 2));
+        double D = Math.sqrt(Math.pow(87 / 100 - posX, 2) + Math.pow (117 / 100 - posY, 2));
         double H = 1.143;
         double A = 9.81;
 
@@ -152,14 +152,12 @@ public class SwerveTeleOp extends LinearOpMode {
         intake = hardwareMap.get(CRServo.class, "intake");
 
 
-        topShooter.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+
+        topShooter.setMode(DcMotorEx.RunMode.RUN_WITHOUT_ENCODER);
         topShooter.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
 
-        bottomShooter.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        bottomShooter.setMode(DcMotorEx.RunMode.RUN_WITHOUT_ENCODER);
         bottomShooter.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
-
-        topShooter.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        bottomShooter.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
 
         frontLeftMotor = hardwareMap.get(DcMotorEx.class, "frontLeftMotor");
         backLeftMotor = hardwareMap.get(DcMotorEx.class, "backLeftMotor");
@@ -221,6 +219,8 @@ public class SwerveTeleOp extends LinearOpMode {
 
         double previousHoodAngle = (hoodEncoder.getVoltage() / 3.3) * 2 * Math.PI;
         double trueHoodAngle = 0.0;
+
+        double newAngle = 0.0;
 
         while (opModeIsActive()) {
             loopTimer.reset();
@@ -318,18 +318,16 @@ public class SwerveTeleOp extends LinearOpMode {
             }
 
             if (gamepad1.a) {
-                SparkFunOTOS.Pose2D pose = drivePos;
-                pose.h = 0;
-                odometry.setPosition(pose);
+                newAngle = drivePos.h;
             }
 
             double shootingAngle = -getLaunchAngle(drivePos.x, drivePos.y, launchVelocity) * (136.0 / 24.0) + offset;
-            shootingAngle = Math.max(Math.min(shootingAngle, 3.57), 1.0);
+            shootingAngle = Math.max(Math.min(shootingAngle, 3.9), 1.0);
             if (shootingAngle != shootingAngle) shootingAngle = 1.0;
             double hoodPower = -2.0 * hoodPID.calculate(shootingAngle / (2 * Math.PI), (trueHoodAngle + hoodAngle) / (2 * Math.PI));
             hood.setPower(hoodPower);
 
-            double rotationRadians = (drivePos.h * Math.PI) / 180;
+            double rotationRadians = ((drivePos.h - newAngle) * Math.PI) / 180;
             matrix2d referenceTransform = new matrix2d(new ArrayList<Integer>(Arrays.asList(2, 2)));
             referenceTransform.components = new ArrayList<Double>(Arrays.asList(
                     Math.cos(rotationRadians), -Math.sin(rotationRadians),

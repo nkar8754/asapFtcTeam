@@ -81,10 +81,11 @@ public class Auto extends LinearOpMode {
         public Pose vel = new Pose();
         public Pose acc = new Pose();
 
-        final double DAMP = 0.85;
+        final double DAMP = 0.86;
         final double DAMP_ANGLE = 0.7;
 
-        public void update(Path path) {
+        public SparkFunOTOS.Pose2D update(Path path) {
+            SparkFunOTOS.Pose2D pose2d = odometry.getPosition();
             double d = Math.min(1, Math.pow(pose.distance(path.getLastPoint()) / 160, 2));
 
             acc.x *= d;
@@ -94,9 +95,9 @@ public class Auto extends LinearOpMode {
             vel.y += acc.y / 6;
             vel.angle += acc.angle / 7;
 
-            pose.x = -odometry.getPosition().y * 100;
-            pose.y = odometry.getPosition().x * 100;
-            pose.angle = (odometry.getPosition().h * Math.PI) / 180.0;
+            pose.x = -pose2d.y * 100;
+            pose.y = pose2d.x * 100;
+            pose.angle = (pose2d.h * Math.PI) / 180.0;
 
             vel.x *= DAMP;
             vel.y *= DAMP;
@@ -109,6 +110,8 @@ public class Auto extends LinearOpMode {
                 vel.x = velDir.x * 0.1;
                 vel.y = velDir.y * 0.1;
             }
+
+            return pose2d;
         }
     }
 
@@ -135,6 +138,12 @@ public class Auto extends LinearOpMode {
         backLeftServo = hardwareMap.get(CRServo.class, "backLeftServo");
         frontRightServo = hardwareMap.get(CRServo.class, "frontRightServo");
         backRightServo = hardwareMap.get(CRServo.class, "backRightServo");
+
+        topShooter.setMode(DcMotorEx.RunMode.RUN_WITHOUT_ENCODER);
+        topShooter.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+
+        bottomShooter.setMode(DcMotorEx.RunMode.RUN_WITHOUT_ENCODER);
+        bottomShooter.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
         odometry = hardwareMap.get(SparkFunOTOS.class, "sensor_otos");
         odometry.setLinearUnit(DistanceUnit.METER);
@@ -182,7 +191,7 @@ public class Auto extends LinearOpMode {
         path.addPoint(new PathPoint(0.4272, 184.3579));
         path.addPoint(new PathPoint(70.9556, 270.6321));
         path.followRadius(10);
-        path.constantHeading(-0.78);
+        path.constantHeading(-0.76);
 
         Robot robot = new Robot();
 
@@ -196,8 +205,35 @@ public class Auto extends LinearOpMode {
         topShooter.setPower(0);
         bottomShooter.setPower(0);
 
+        ElapsedTime loopTimer = new ElapsedTime();
+
         while (timer.milliseconds() <= 30000 && opModeIsActive()) {//30500) {
-            if (Math.sqrt(robot.vel.x * robot.vel.x + robot.vel.y * robot.vel.y) < 0.01 && timer.milliseconds() > 2000) {
+            loopTimer.reset();
+            SparkFunOTOS.Pose2D pose2d = robot.update(path);
+            path.update(robot.pose);
+
+            Pose follow_pose = path.getFollowPose();
+            Circle followCircle = path.getFollowCircle();
+
+            robot.acc.x = Math.cos(robot.pose.angleTo(follow_pose));
+            robot.acc.y = Math.sin(robot.pose.angleTo(follow_pose));
+            robot.acc.angle = Math.max(Math.min((follow_pose.angle-robot.pose.angle), 0.01), -0.01);
+
+            double rotationRadians = (pose2d.h * Math.PI) / 180.0;
+            matrix2d referenceTransform = new matrix2d(new ArrayList<Integer>(Arrays.asList(2, 2)));
+            referenceTransform.components = new ArrayList<Double>(Arrays.asList(
+                    Math.cos(rotationRadians), -Math.sin(rotationRadians),
+                    Math.sin(rotationRadians), Math.cos(rotationRadians)
+            ));
+
+            matrix2d velocityWorld = new matrix2d(new ArrayList<Integer>(Arrays.asList(1, 2)));
+            velocityWorld.components = new ArrayList<Double>(Arrays.asList(robot.vel.y * 4.7, robot.vel.x * 4.7));
+            velocityWorld = matrix2d.matrixMultiply(referenceTransform, velocityWorld);
+
+            ArrayList<Double> output = swerveController.getVelocities(velocityWorld.components.get(0), velocityWorld.components.get(1), robot.vel.angle / 12);
+            drive(output, 1);
+
+            if (Math.sqrt(robot.vel.x * robot.vel.x + robot.vel.y * robot.vel.y) < 0.05 && timer.milliseconds() > 2000) {
                 if (notFiring) {
                     shooterTimer = new ElapsedTime();
                     notFiring = false;
@@ -207,6 +243,8 @@ public class Auto extends LinearOpMode {
                 double power = pidController.calculate(1100, velocity);
                 topShooter.setPower(power);
                 bottomShooter.setPower(power);
+                telemetry.addData("timer: ", shooterTimer.milliseconds());
+                telemetry.update();
 
                 if (shooterTimer.milliseconds() > 3000 && shooterTimer.milliseconds() <= 4000) {
                     topFlap.setPosition(topFlapStow);
@@ -239,46 +277,6 @@ public class Auto extends LinearOpMode {
                 intake.setPower(0);
                 intakeMotor.setPower(0);
             }
-
-            double rotationRadians = (odometry.getPosition().h * Math.PI) / 180.0;
-            matrix2d referenceTransform = new matrix2d(new ArrayList<Integer>(Arrays.asList(2, 2)));
-            referenceTransform.components = new ArrayList<Double>(Arrays.asList(
-                    Math.cos(rotationRadians), -Math.sin(rotationRadians),
-                    Math.sin(rotationRadians), Math.cos(rotationRadians)
-            ));
-
-            robot.update(path);
-            path.update(robot.pose);
-
-            Pose follow_pose = path.getFollowPose();
-            Circle followCircle = path.getFollowCircle();
-
-            robot.acc.x = Math.cos(robot.pose.angleTo(follow_pose));
-            robot.acc.y = Math.sin(robot.pose.angleTo(follow_pose));
-            robot.acc.angle = Math.max(Math.min((follow_pose.angle-robot.pose.angle), 0.01), -0.01);
-
-            matrix2d velocityWorld = new matrix2d(new ArrayList<Integer>(Arrays.asList(1, 2)));
-            velocityWorld.components = new ArrayList<Double>(Arrays.asList(robot.vel.y * 5, robot.vel.x * 5));
-            velocityWorld = matrix2d.matrixMultiply(referenceTransform, velocityWorld);
-
-            ArrayList<Double> output = swerveController.getVelocities(velocityWorld.components.get(0), velocityWorld.components.get(1), robot.vel.angle / 10);
-            drive(output, 1);
-
-            telemetry.addData("posx: ", path.robot_pose.x);
-            telemetry.addData("posy: ", path.robot_pose.y);
-            telemetry.addData("angle: ", (odometry.getPosition().h * Math.PI) / 180.0);
-            telemetry.addData("velx: ", robot.vel.x * 3);
-            telemetry.addData("vely: ", robot.vel.y * 3);
-            telemetry.addData("angular: ", robot.vel.angle);
-            telemetry.addData("accx: ", robot.acc.x / 3);
-            telemetry.addData("accy: ", robot.acc.y / 3);
-            telemetry.addData("distance: ", robot.pose.distance(path.getLastPoint()));
-            telemetry.addData("passed: ", path.getLastPoint().passed);
-            telemetry.addLine("first while");
-            telemetry.addData("ball shot: ", ballsShot);
-            telemetry.addData("flapped: ", flapped);
-            telemetry.addData("staged: ", staged);
-            telemetry.update();
         }
 
         bottomFlap.setPosition(bottomFlapStow);
@@ -303,14 +301,7 @@ public class Auto extends LinearOpMode {
         ElapsedTime timer2 = new ElapsedTime();
 
         while (timer.milliseconds() <= 30000 && opModeIsActive()) {//30500) {
-            double rotationRadians = (odometry.getPosition().h * Math.PI) / 180.0;
-            matrix2d referenceTransform = new matrix2d(new ArrayList<Integer>(Arrays.asList(2, 2)));
-            referenceTransform.components = new ArrayList<Double>(Arrays.asList(
-                    Math.cos(rotationRadians), -Math.sin(rotationRadians),
-                    Math.sin(rotationRadians), Math.cos(rotationRadians)
-            ));
-
-            robot.update(path);
+            SparkFunOTOS.Pose2D pose2d = robot.update(path);
             path.update(robot.pose);
 
             Pose follow_pose = path.getFollowPose();
@@ -320,22 +311,29 @@ public class Auto extends LinearOpMode {
             robot.acc.y = Math.sin(robot.pose.angleTo(follow_pose));
             robot.acc.angle = Math.max(Math.min((follow_pose.angle-robot.pose.angle), 0.01), -0.01);
 
+            double rotationRadians = (pose2d.h * Math.PI) / 180.0;
+            matrix2d referenceTransform = new matrix2d(new ArrayList<Integer>(Arrays.asList(2, 2)));
+            referenceTransform.components = new ArrayList<Double>(Arrays.asList(
+                    Math.cos(rotationRadians), -Math.sin(rotationRadians),
+                    Math.sin(rotationRadians), Math.cos(rotationRadians)
+            ));
+
             matrix2d velocityWorld = new matrix2d(new ArrayList<Integer>(Arrays.asList(1, 2)));
-            velocityWorld.components = new ArrayList<Double>(Arrays.asList(robot.vel.y * 4.5, robot.vel.x * 4.5));
+            velocityWorld.components = new ArrayList<Double>(Arrays.asList(robot.vel.y * 4.7, robot.vel.x * 4.7));
             velocityWorld = matrix2d.matrixMultiply(referenceTransform, velocityWorld);
 
-            ArrayList<Double> output = swerveController.getVelocities(velocityWorld.components.get(0), velocityWorld.components.get(1), robot.vel.angle / 10);
+            ArrayList<Double> output = swerveController.getVelocities(velocityWorld.components.get(0), velocityWorld.components.get(1), robot.vel.angle / 7);
             drive(output, 1);
 
-            if (Math.sqrt(robot.vel.x * robot.vel.x + robot.vel.y * robot.vel.y) < 0.01 && timer2.milliseconds() > 2000) {
+            if (Math.sqrt(robot.vel.x * robot.vel.x + robot.vel.y * robot.vel.y) < 0.05 && timer2.milliseconds() > 2000) {
                 break;
             }
 
             telemetry.addData("posx: ", path.robot_pose.x);
             telemetry.addData("posy: ", path.robot_pose.y);
-            telemetry.addData("angle: ", (odometry.getPosition().h * Math.PI) / 180.0);
-            telemetry.addData("velx: ", robot.vel.x * 3);
-            telemetry.addData("vely: ", robot.vel.y * 3);
+
+            telemetry.addData("velx: ", robot.vel.x * 4);
+            telemetry.addData("vely: ", robot.vel.y * 4);
             telemetry.addData("angular: ", robot.vel.angle);
             telemetry.addData("accx: ", robot.acc.x / 3);
             telemetry.addData("accy: ", robot.acc.y / 3);
@@ -353,8 +351,8 @@ public class Auto extends LinearOpMode {
 
         path = null;
         path = new Path();
-        path.addPoint(new PathPoint(27.4658, 185.4651));
-        path.addPoint(new PathPoint(101.7761, 185.3337));
+        path.addPoint(new PathPoint(27.4658, 186.3337));
+        path.addPoint(new PathPoint(101.7761, 186.3337));
         path.followRadius(3);
         path.constantHeading(-Math.PI / 2.0);
 
@@ -364,14 +362,7 @@ public class Auto extends LinearOpMode {
         ElapsedTime timer3 = new ElapsedTime();
 
         while (timer.milliseconds() <= 30000 && opModeIsActive()) {//30500) {
-            double rotationRadians = (odometry.getPosition().h * Math.PI) / 180.0;
-            matrix2d referenceTransform = new matrix2d(new ArrayList<Integer>(Arrays.asList(2, 2)));
-            referenceTransform.components = new ArrayList<Double>(Arrays.asList(
-                    Math.cos(rotationRadians), -Math.sin(rotationRadians),
-                    Math.sin(rotationRadians), Math.cos(rotationRadians)
-            ));
-
-            robot.update(path);
+            SparkFunOTOS.Pose2D pose2d = robot.update(path);
             path.update(robot.pose);
 
             Pose follow_pose = path.getFollowPose();
@@ -381,22 +372,29 @@ public class Auto extends LinearOpMode {
             robot.acc.y = Math.sin(robot.pose.angleTo(follow_pose));
             robot.acc.angle = Math.max(Math.min((follow_pose.angle-robot.pose.angle), 0.01), -0.01);
 
+            double rotationRadians = (pose2d.h * Math.PI) / 180.0;
+            matrix2d referenceTransform = new matrix2d(new ArrayList<Integer>(Arrays.asList(2, 2)));
+            referenceTransform.components = new ArrayList<Double>(Arrays.asList(
+                    Math.cos(rotationRadians), -Math.sin(rotationRadians),
+                    Math.sin(rotationRadians), Math.cos(rotationRadians)
+            ));
+
             matrix2d velocityWorld = new matrix2d(new ArrayList<Integer>(Arrays.asList(1, 2)));
-            velocityWorld.components = new ArrayList<Double>(Arrays.asList(robot.vel.y * 4.5, robot.vel.x * 4.5));
+            velocityWorld.components = new ArrayList<Double>(Arrays.asList(robot.vel.y * 5, robot.vel.x * 5));
             velocityWorld = matrix2d.matrixMultiply(referenceTransform, velocityWorld);
 
-            ArrayList<Double> output = swerveController.getVelocities(velocityWorld.components.get(0), velocityWorld.components.get(1), robot.vel.angle / 10);
+            ArrayList<Double> output = swerveController.getVelocities(velocityWorld.components.get(0), velocityWorld.components.get(1), robot.vel.angle / 7);
             drive(output, 1);
 
-            if (Math.sqrt(robot.vel.x * robot.vel.x + robot.vel.y * robot.vel.y) < 0.01 && timer3.milliseconds() > 2000) {
+            if (Math.sqrt(robot.vel.x * robot.vel.x + robot.vel.y * robot.vel.y) < 0.05 && timer3.milliseconds() > 2000) {
                 break;
             }
 
             telemetry.addData("posx: ", path.robot_pose.x);
             telemetry.addData("posy: ", path.robot_pose.y);
-            telemetry.addData("angle: ", (odometry.getPosition().h * Math.PI) / 180.0);
-            telemetry.addData("velx: ", robot.vel.x * 3);
-            telemetry.addData("vely: ", robot.vel.y * 3);
+
+            telemetry.addData("velx: ", robot.vel.x * 4);
+            telemetry.addData("vely: ", robot.vel.y * 4);
             telemetry.addData("angular: ", robot.vel.angle);
             telemetry.addData("accx: ", robot.acc.x / 3);
             telemetry.addData("accy: ", robot.acc.y / 3);
@@ -415,7 +413,7 @@ public class Auto extends LinearOpMode {
         path.addPoint(new PathPoint(101.7761, 190.3337));
         path.addPoint(new PathPoint(70.9556, 270.6321));
         path.followRadius(5);
-        path.constantHeading(-0.78);
+        path.constantHeading(-0.76);
 
         robot = null;
         robot = new Robot();
@@ -425,7 +423,31 @@ public class Auto extends LinearOpMode {
         ElapsedTime timer4 = new ElapsedTime();
 
         while (timer.milliseconds() <= 30000 && opModeIsActive()) {//30500) {
-            if (Math.sqrt(robot.vel.x * robot.vel.x + robot.vel.y * robot.vel.y) < 0.01 && timer4.milliseconds() > 2000) {
+            SparkFunOTOS.Pose2D pose2d = robot.update(path);
+            path.update(robot.pose);
+
+            double rotationRadians = (pose2d.h * Math.PI) / 180.0;
+            matrix2d referenceTransform = new matrix2d(new ArrayList<Integer>(Arrays.asList(2, 2)));
+            referenceTransform.components = new ArrayList<Double>(Arrays.asList(
+                    Math.cos(rotationRadians), -Math.sin(rotationRadians),
+                    Math.sin(rotationRadians), Math.cos(rotationRadians)
+            ));
+
+            Pose follow_pose = path.getFollowPose();
+            Circle followCircle = path.getFollowCircle();
+
+            robot.acc.x = Math.cos(robot.pose.angleTo(follow_pose));
+            robot.acc.y = Math.sin(robot.pose.angleTo(follow_pose));
+            robot.acc.angle = Math.max(Math.min((follow_pose.angle - robot.pose.angle), 0.01), -0.01);
+
+            matrix2d velocityWorld = new matrix2d(new ArrayList<Integer>(Arrays.asList(1, 2)));
+            velocityWorld.components = new ArrayList<Double>(Arrays.asList(robot.vel.y * 4.7, robot.vel.x * 4.7));
+            velocityWorld = matrix2d.matrixMultiply(referenceTransform, velocityWorld);
+
+            ArrayList<Double> output = swerveController.getVelocities(velocityWorld.components.get(0), velocityWorld.components.get(1), robot.vel.angle / 10);
+            drive(output, 1);
+
+            if (Math.sqrt(robot.vel.x * robot.vel.x + robot.vel.y * robot.vel.y) < 0.05 && timer4.milliseconds() > 2000) {
                 if (notFiring) {
                     shooterTimer = new ElapsedTime();
                     notFiring = false;
@@ -468,35 +490,11 @@ public class Auto extends LinearOpMode {
                 intakeMotor.setPower(0);
             }
 
-            double rotationRadians = (odometry.getPosition().h * Math.PI) / 180.0;
-            matrix2d referenceTransform = new matrix2d(new ArrayList<Integer>(Arrays.asList(2, 2)));
-            referenceTransform.components = new ArrayList<Double>(Arrays.asList(
-                    Math.cos(rotationRadians), -Math.sin(rotationRadians),
-                    Math.sin(rotationRadians), Math.cos(rotationRadians)
-            ));
-
-            robot.update(path);
-            path.update(robot.pose);
-
-            Pose follow_pose = path.getFollowPose();
-            Circle followCircle = path.getFollowCircle();
-
-            robot.acc.x = Math.cos(robot.pose.angleTo(follow_pose));
-            robot.acc.y = Math.sin(robot.pose.angleTo(follow_pose));
-            robot.acc.angle = Math.max(Math.min((follow_pose.angle - robot.pose.angle), 0.01), -0.01);
-
-            matrix2d velocityWorld = new matrix2d(new ArrayList<Integer>(Arrays.asList(1, 2)));
-            velocityWorld.components = new ArrayList<Double>(Arrays.asList(robot.vel.y * 5, robot.vel.x * 5));
-            velocityWorld = matrix2d.matrixMultiply(referenceTransform, velocityWorld);
-
-            ArrayList<Double> output = swerveController.getVelocities(velocityWorld.components.get(0), velocityWorld.components.get(1), robot.vel.angle / 10);
-            drive(output, 1);
-
             telemetry.addData("posx: ", path.robot_pose.x);
             telemetry.addData("posy: ", path.robot_pose.y);
-            telemetry.addData("angle: ", (odometry.getPosition().h * Math.PI) / 180.0);
-            telemetry.addData("velx: ", robot.vel.x * 3);
-            telemetry.addData("vely: ", robot.vel.y * 3);
+
+            telemetry.addData("velx: ", robot.vel.x * 4);
+            telemetry.addData("vely: ", robot.vel.y * 4);
             telemetry.addData("angular: ", robot.vel.angle);
             telemetry.addData("accx: ", robot.acc.x / 3);
             telemetry.addData("accy: ", robot.acc.y / 3);
@@ -530,14 +528,7 @@ public class Auto extends LinearOpMode {
         ElapsedTime timer5 = new ElapsedTime();
 
         while (timer.milliseconds() <= 30000 && opModeIsActive()) {//30500) {
-            double rotationRadians = (odometry.getPosition().h * Math.PI) / 180.0;
-            matrix2d referenceTransform = new matrix2d(new ArrayList<Integer>(Arrays.asList(2, 2)));
-            referenceTransform.components = new ArrayList<Double>(Arrays.asList(
-                    Math.cos(rotationRadians), -Math.sin(rotationRadians),
-                    Math.sin(rotationRadians), Math.cos(rotationRadians)
-            ));
-
-            robot.update(path);
+            SparkFunOTOS.Pose2D pose2d = robot.update(path);
             path.update(robot.pose);
 
             Pose follow_pose = path.getFollowPose();
@@ -547,22 +538,29 @@ public class Auto extends LinearOpMode {
             robot.acc.y = Math.sin(robot.pose.angleTo(follow_pose));
             robot.acc.angle = Math.max(Math.min((follow_pose.angle-robot.pose.angle), 0.01), -0.01);
 
+            double rotationRadians = (pose2d.h * Math.PI) / 180.0;
+            matrix2d referenceTransform = new matrix2d(new ArrayList<Integer>(Arrays.asList(2, 2)));
+            referenceTransform.components = new ArrayList<Double>(Arrays.asList(
+                    Math.cos(rotationRadians), -Math.sin(rotationRadians),
+                    Math.sin(rotationRadians), Math.cos(rotationRadians)
+            ));
+
             matrix2d velocityWorld = new matrix2d(new ArrayList<Integer>(Arrays.asList(1, 2)));
-            velocityWorld.components = new ArrayList<Double>(Arrays.asList(robot.vel.y * 4.5, robot.vel.x * 4.5));
+            velocityWorld.components = new ArrayList<Double>(Arrays.asList(robot.vel.y * 5, robot.vel.x * 5));
             velocityWorld = matrix2d.matrixMultiply(referenceTransform, velocityWorld);
 
-            ArrayList<Double> output = swerveController.getVelocities(velocityWorld.components.get(0), velocityWorld.components.get(1), robot.vel.angle / 10);
+            ArrayList<Double> output = swerveController.getVelocities(velocityWorld.components.get(0), velocityWorld.components.get(1), robot.vel.angle / 8);
             drive(output, 1);
 
-            if (Math.sqrt(robot.vel.x * robot.vel.x + robot.vel.y * robot.vel.y) < 0.01 && timer5.milliseconds() > 2000) {
+            if (Math.sqrt(robot.vel.x * robot.vel.x + robot.vel.y * robot.vel.y) < 0.02 && timer5.milliseconds() > 2000) {
                 break;
             }
 
             telemetry.addData("posx: ", path.robot_pose.x);
             telemetry.addData("posy: ", path.robot_pose.y);
-            telemetry.addData("angle: ", (odometry.getPosition().h * Math.PI) / 180.0);
-            telemetry.addData("velx: ", robot.vel.x * 3);
-            telemetry.addData("vely: ", robot.vel.y * 3);
+
+            telemetry.addData("velx: ", robot.vel.x * 4);
+            telemetry.addData("vely: ", robot.vel.y * 4);
             telemetry.addData("angular: ", robot.vel.angle);
             telemetry.addData("accx: ", robot.acc.x / 3);
             telemetry.addData("accy: ", robot.acc.y / 3);
