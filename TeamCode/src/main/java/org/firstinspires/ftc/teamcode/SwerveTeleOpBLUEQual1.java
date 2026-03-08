@@ -1,54 +1,31 @@
 package org.firstinspires.ftc.teamcode;
 
 import com.acmerobotics.dashboard.FtcDashboard;
-//import com.arcrobotics.ftclib.kinematics.wpilibkinematics.ChassisSpeeds;
 import com.acmerobotics.dashboard.config.Config;
-import com.arcrobotics.ftclib.hardware.motors.Motor;
-import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
-import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
-import com.qualcomm.robotcore.hardware.AnalogInput;
-import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.hardware.CRServo;
 import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
-//import com.arcrobotics.ftclib.kinematics.wpilibkinematics.SwerveDriveKinematics;
-//import com.arcrobotics.ftclib.kinematics.wpilibkinematics.SwerveModuleState;
-//import com.arcrobotics.ftclib.geometry.Translation2d;
-import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.hardware.lynx.LynxModule;
-import com.qualcomm.robotcore.hardware.DcMotorSimple;
-import com.qualcomm.robotcore.hardware.Servo;
-
-import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
-import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
-import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import com.qualcomm.hardware.sparkfun.SparkFunOTOS;
+import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import com.qualcomm.robotcore.hardware.AnalogInput;
+import com.qualcomm.robotcore.hardware.CRServo;
+import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
-import org.opencv.core.Core;
-import org.opencv.core.CvType;
-import org.opencv.core.Mat;
-import org.opencv.core.MatOfInt;
-import org.opencv.core.MatOfPoint;
-import org.opencv.core.MatOfPoint2f;
-import org.opencv.core.Point;
+import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.opencv.core.RotatedRect;
-import org.opencv.core.Scalar;
-import org.opencv.core.Size;
-import org.opencv.imgproc.Imgproc;
 import org.openftc.easyopencv.OpenCvCamera;
-import org.openftc.easyopencv.OpenCvCameraFactory;
-import org.openftc.easyopencv.OpenCvCameraRotation;
-import org.openftc.easyopencv.OpenCvInternalCamera2;
-import org.openftc.easyopencv.OpenCvPipeline;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Scanner;
 
 @Config
 @TeleOp
-public class SwerveTeleOp extends LinearOpMode {
+public class SwerveTeleOpBLUEQual1 extends LinearOpMode {
     OpenCvCamera camera;
     SparkFunOTOS odometry;
     SparkFunOTOS.Pose2D odoPos;
@@ -124,7 +101,7 @@ public class SwerveTeleOp extends LinearOpMode {
     }
 
     private double getLaunchAngle(double posX, double posY, double v) {
-        double D = Math.sqrt(Math.pow(87 / 100 - posX, 2) + Math.pow (117 / 100 - posY, 2));
+        double D = Math.sqrt(Math.pow(127 / 100 - posX, 2) + Math.pow (-201 / 100 - posY, 2));
         double H = 1.143;
         double A = 9.81;
 
@@ -322,7 +299,7 @@ public class SwerveTeleOp extends LinearOpMode {
             }
 
             double shootingAngle = -getLaunchAngle(drivePos.x, drivePos.y, launchVelocity) * (136.0 / 24.0) + offset;
-            shootingAngle = Math.max(Math.min(shootingAngle, 3.9), 1.0);
+            shootingAngle = Math.max(Math.min(shootingAngle, 3.57), 1.0);
             if (shootingAngle != shootingAngle) shootingAngle = 1.0;
             double hoodPower = -2.0 * hoodPID.calculate(shootingAngle / (2 * Math.PI), (trueHoodAngle + hoodAngle) / (2 * Math.PI));
             hood.setPower(hoodPower);

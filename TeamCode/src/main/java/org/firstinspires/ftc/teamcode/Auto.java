@@ -351,7 +351,7 @@ public class Auto extends LinearOpMode {
 
         path = null;
         path = new Path();
-        path.addPoint(new PathPoint(27.4658, 186.3337));
+        path.addPoint(new PathPoint(10.4658, 186.3337));
         path.addPoint(new PathPoint(101.7761, 186.3337));
         path.followRadius(3);
         path.constantHeading(-Math.PI / 2.0);
@@ -380,7 +380,7 @@ public class Auto extends LinearOpMode {
             ));
 
             matrix2d velocityWorld = new matrix2d(new ArrayList<Integer>(Arrays.asList(1, 2)));
-            velocityWorld.components = new ArrayList<Double>(Arrays.asList(robot.vel.y * 5, robot.vel.x * 5));
+            velocityWorld.components = new ArrayList<Double>(Arrays.asList(robot.vel.y * 4.7, robot.vel.x * 4.7));
             velocityWorld = matrix2d.matrixMultiply(referenceTransform, velocityWorld);
 
             ArrayList<Double> output = swerveController.getVelocities(velocityWorld.components.get(0), velocityWorld.components.get(1), robot.vel.angle / 7);
@@ -411,6 +411,7 @@ public class Auto extends LinearOpMode {
         path = null;
         path = new Path();
         path.addPoint(new PathPoint(101.7761, 190.3337));
+        path.addPoint(new PathPoint(0.4272, 184.3579));
         path.addPoint(new PathPoint(70.9556, 270.6321));
         path.followRadius(5);
         path.constantHeading(-0.76);
@@ -549,7 +550,7 @@ public class Auto extends LinearOpMode {
             velocityWorld.components = new ArrayList<Double>(Arrays.asList(robot.vel.y * 5, robot.vel.x * 5));
             velocityWorld = matrix2d.matrixMultiply(referenceTransform, velocityWorld);
 
-            ArrayList<Double> output = swerveController.getVelocities(velocityWorld.components.get(0), velocityWorld.components.get(1), robot.vel.angle / 8);
+            ArrayList<Double> output = swerveController.getVelocities(velocityWorld.components.get(0), velocityWorld.components.get(1), robot.vel.angle / 5);
             drive(output, 1);
 
             if (Math.sqrt(robot.vel.x * robot.vel.x + robot.vel.y * robot.vel.y) < 0.02 && timer5.milliseconds() > 2000) {

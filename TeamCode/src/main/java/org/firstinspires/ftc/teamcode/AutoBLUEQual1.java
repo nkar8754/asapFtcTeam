@@ -1,9 +1,5 @@
 package org.firstinspires.ftc.teamcode;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 
-import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.hardware.sparkfun.SparkFunOTOS;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
@@ -11,20 +7,21 @@ import com.qualcomm.robotcore.hardware.AnalogInput;
 import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
-import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
-import org.firstinspires.ftc.teamcode.path.Path;
-import org.firstinspires.ftc.teamcode.path.PathPoint;
-import org.firstinspires.ftc.teamcode.geometry.Pose;
-import org.firstinspires.ftc.teamcode.geometry.Circle;
+
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
+import org.firstinspires.ftc.teamcode.geometry.Circle;
+import org.firstinspires.ftc.teamcode.geometry.Pose;
+import org.firstinspires.ftc.teamcode.path.Path;
+import org.firstinspires.ftc.teamcode.path.PathPoint;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 
 @Autonomous
-public class AutoBLUE extends LinearOpMode {
+public class AutoBLUEQual1 extends LinearOpMode {
     private SparkFunOTOS odometry;
 
     private DcMotor frontLeftMotor;
@@ -246,7 +243,7 @@ public class AutoBLUE extends LinearOpMode {
                 telemetry.addData("timer: ", shooterTimer.milliseconds());
                 telemetry.update();
 
-                if (shooterTimer.milliseconds() > 3000 && shooterTimer.milliseconds() <= 4000) {
+                if (shooterTimer.milliseconds() > 2000 && shooterTimer.milliseconds() <= 4000) {
                     topFlap.setPosition(topFlapStow);
                     bottomFlap.setPosition(bottomFlapAgitate);
                     intake.setPower(-1);
@@ -291,8 +288,8 @@ public class AutoBLUE extends LinearOpMode {
         path = new Path();
         path.addPoint(new PathPoint(-66.9556, 266.6321));
         path.addPoint(new PathPoint(-0.4272, 184.3579));
-        path.addPoint(new PathPoint(-27.4658, 185.4651));
-        path.followRadius(5);
+        path.addPoint(new PathPoint(-27.4658, 68.7561));
+        path.followRadius(10);
         path.constantHeading(Math.PI / 2.0);
 
         robot = null;
@@ -322,7 +319,7 @@ public class AutoBLUE extends LinearOpMode {
             velocityWorld.components = new ArrayList<Double>(Arrays.asList(robot.vel.y * 4.7, robot.vel.x * 4.7));
             velocityWorld = matrix2d.matrixMultiply(referenceTransform, velocityWorld);
 
-            ArrayList<Double> output = swerveController.getVelocities(velocityWorld.components.get(0), velocityWorld.components.get(1), robot.vel.angle / 7);
+            ArrayList<Double> output = swerveController.getVelocities(velocityWorld.components.get(0), velocityWorld.components.get(1), robot.vel.angle / 10);
             drive(output, 1);
 
             if (Math.sqrt(robot.vel.x * robot.vel.x + robot.vel.y * robot.vel.y) < 0.05 && timer2.milliseconds() > 2000) {
@@ -351,8 +348,8 @@ public class AutoBLUE extends LinearOpMode {
 
         path = null;
         path = new Path();
-        path.addPoint(new PathPoint(-10.4658, 186.3337));
-        path.addPoint(new PathPoint(-101.7761, 186.3337));
+        path.addPoint(new PathPoint(-10.4658, 68.7561));
+        path.addPoint(new PathPoint(-101.7761, 68.7561));
         path.followRadius(3);
         path.constantHeading(Math.PI / 2.0);
 
@@ -383,7 +380,7 @@ public class AutoBLUE extends LinearOpMode {
             velocityWorld.components = new ArrayList<Double>(Arrays.asList(robot.vel.y * 4.7, robot.vel.x * 4.7));
             velocityWorld = matrix2d.matrixMultiply(referenceTransform, velocityWorld);
 
-            ArrayList<Double> output = swerveController.getVelocities(velocityWorld.components.get(0), velocityWorld.components.get(1), robot.vel.angle / 7);
+            ArrayList<Double> output = swerveController.getVelocities(velocityWorld.components.get(0), velocityWorld.components.get(1), robot.vel.angle / 10);
             drive(output, 1);
 
             if (Math.sqrt(robot.vel.x * robot.vel.x + robot.vel.y * robot.vel.y) < 0.05 && timer3.milliseconds() > 2000) {
@@ -410,10 +407,10 @@ public class AutoBLUE extends LinearOpMode {
 
         path = null;
         path = new Path();
-        path.addPoint(new PathPoint(-101.7761, 190.3337));
+        path.addPoint(new PathPoint(-101.7761, 68.7561));
         path.addPoint(new PathPoint(-0.4272, 184.3579));
         path.addPoint(new PathPoint(-70.9556, 270.6321));
-        path.followRadius(5);
+        path.followRadius(10);
         path.constantHeading(0.76);
 
         robot = null;
@@ -459,7 +456,7 @@ public class AutoBLUE extends LinearOpMode {
                 topShooter.setPower(power);
                 bottomShooter.setPower(power);
 
-                if (shooterTimer.milliseconds() > 3000 && shooterTimer.milliseconds() <= 4000) {
+                if (shooterTimer.milliseconds() > 2000 && shooterTimer.milliseconds() <= 4000) {
                     topFlap.setPosition(topFlapStow);
                     bottomFlap.setPosition(bottomFlapAgitate);
                     intake.setPower(-1);
@@ -519,8 +516,8 @@ public class AutoBLUE extends LinearOpMode {
         path = null;
         path = new Path();
         path.addPoint(new PathPoint(-70.9556, 270.6321));
-        path.addPoint(new PathPoint(-91.156, 202.5452));
-        path.followRadius(3);
+        path.addPoint(new PathPoint(0.795, 121.1548));
+        path.followRadius(10);
         path.constantHeading(Math.PI / 2.0);
 
         robot = null;
